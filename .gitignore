@@ -1,0 +1,4 @@
+nb-configuration.xml
+nbactions.xml
+target/
+!target/BillPalFXUI-1.6.jar
