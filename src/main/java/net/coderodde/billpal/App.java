@@ -76,10 +76,6 @@ public class App extends Application {
         rootPane.setTop(menuBar);
         rootPane.setCenter(tableView);
         stage.setScene(scene);
-        
-        // Build and set the application menu.
-//        ((BorderPane) scene.getRoot()).getChildren().add(menuBar);
-        
         stage.show();
     }
 
