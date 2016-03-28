@@ -14,6 +14,7 @@ import javafx.scene.control.SelectionMode;
 import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableColumn.CellEditEvent;
+import javafx.scene.control.TableRow;
 import javafx.scene.control.TableView;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.control.cell.TextFieldTableCell;
@@ -114,9 +115,19 @@ public class App extends Application {
             TextFieldTableCell.
                     <Bill, Date>forTableColumn(new DateStringConverter()));
         
-        tableColumnExpirationDate.setCellFactory(
-            TextFieldTableCell.
-                    <Bill, Date>forTableColumn(new DateStringConverter()));
+        Callback<TableColumn<Bill, Date>, TableCell<Bill, Date>> defaultTextFieldCellFactory = TextFieldTableCell.<Bill, Date>forTableColumn(new DateStringConverter());
+        
+        tableColumnExpirationDate.setCellFactory(col -> {
+                TableCell<Bill, Date> cell = defaultTextFieldCellFactory.call(col);
+                cell.itemProperty().addListener((obs, oldValue, newValue) -> {
+//                    TableRow row = cell.getTableRow();
+                    cell.setEditable(true);
+                });
+                cell.setStyle("-fx-background-color: red;");
+                return cell;
+        }
+            /*TextFieldTableCell.
+                    <Bill, Date>forTableColumn(new DateStringConverter())*/);
         
         tableColumnPaymentDate.setCellFactory(
             TextFieldTableCell.
