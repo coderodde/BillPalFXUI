@@ -31,7 +31,8 @@ public class DateStringConverter extends StringConverter<Date> {
         try {
             return DATE_FORMAT.parse(string);
         } catch (ParseException ex) {
-            return new Date();
+            return null;
+//            return new Date();
         }
     }
     

@@ -14,7 +14,6 @@ import javafx.scene.control.SelectionMode;
 import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableColumn.CellEditEvent;
-import javafx.scene.control.TableRow;
 import javafx.scene.control.TableView;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.control.cell.TextFieldTableCell;
@@ -26,9 +25,10 @@ public class App extends Application {
 
     private static final int WINDOW_WIDTH  = 800;
     private static final int WINDOW_HEIGHT = 600;
-    
+    private static final long MILLISECONDS_PER_DAY = 24 * 60 * 60 * 1000;
+
     private final TableView<Bill> tableView = new TableView<>();
-    
+
     // Table columns:
     private final TableColumn<Bill, Double> tableColumnAmount;
     private final TableColumn<Bill, Date>   tableColumnDateReceived;
@@ -39,7 +39,7 @@ public class App extends Application {
     private final TableColumn<Bill, String> tableColumnReferenceNumber;
     private final TableColumn<Bill, String> tableColumnBillNumber;
     private final TableColumn<Bill, String> tableColumnComment;
-    
+
     // Menu stuff:
     private final MenuBar menuBar = new MenuBar();
     private final Menu fileMenu   = new Menu("File");
@@ -54,16 +54,16 @@ public class App extends Application {
     private final MenuItem editMenuNewBill = new MenuItem("New bill");
     private final MenuItem editMenuRemoveSelected =
               new MenuItem("Remove selected");
-    
+
     // Table menu:
     private final MenuItem tableMenuAddRow = new MenuItem("Add new row");
     private final MenuItem tableMenuRemoveSelected = 
               new MenuItem("Remove selected");
-    
+
     // Other:
     private final BorderPane rootPane = new BorderPane();
     private final Scene scene = new Scene(rootPane);
-    
+
     public App() {
         this.tableColumnAmount          = new TableColumn<>("Amount");
         this.tableColumnDateReceived    = new TableColumn<>("Date received");
@@ -74,80 +74,83 @@ public class App extends Application {
         this.tableColumnReferenceNumber = new TableColumn<>("Reference");
         this.tableColumnBillNumber      = new TableColumn<>("Bill number");
         this.tableColumnComment         = new TableColumn<>("Comment");
-        
+
         tableColumnAmount.setCellValueFactory(
                 new PropertyValueFactory<>("amount")
         );
-        
+
         tableColumnDateReceived.setCellValueFactory(
                 new PropertyValueFactory<>("dateReceived")
         );
-        
+
         tableColumnExpirationDate.setCellValueFactory(
                 new PropertyValueFactory<>("expirationDate")
         );
-        
+
         tableColumnPaymentDate.setCellValueFactory(
                 new PropertyValueFactory<>("paymentDate")
         );
-        
+
         tableColumnReceiverIban.setCellValueFactory(
                 new PropertyValueFactory<>("receiverIban")
         );
-        
+
         tableColumnReferenceNumber.setCellValueFactory(
                 new PropertyValueFactory<>("referenceNumber")
         );
-        
+
         tableColumnBillNumber.setCellValueFactory(
                 new PropertyValueFactory<>("billNumber")
         );
-        
+
         tableColumnComment.setCellValueFactory(
                 new PropertyValueFactory<>("comment")
         );
-        
+
         tableColumnAmount.setCellFactory(
             TextFieldTableCell.
                     <Bill, Double>forTableColumn(new DoubleStringConverter()));
-        
+
         tableColumnDateReceived.setCellFactory(
             TextFieldTableCell.
                     <Bill, Date>forTableColumn(new DateStringConverter()));
-        
-        Callback<TableColumn<Bill, Date>, TableCell<Bill, Date>> defaultTextFieldCellFactory = TextFieldTableCell.<Bill, Date>forTableColumn(new DateStringConverter());
-        
-        tableColumnExpirationDate.setCellFactory(col -> {
-                TableCell<Bill, Date> cell = defaultTextFieldCellFactory.call(col);
-                cell.itemProperty().addListener((obs, oldValue, newValue) -> {
-//                    TableRow row = cell.getTableRow();
-                    cell.setEditable(true);
-                });
-                cell.setStyle("-fx-background-color: red;");
-                return cell;
-        }
-            /*TextFieldTableCell.
-                    <Bill, Date>forTableColumn(new DateStringConverter())*/);
-        
+
+        Callback<TableColumn<Bill, Date>, TableCell<Bill, Date>>
+                defaultTextFieldCellFactory = 
+                TextFieldTableCell.<Bill, Date>forTableColumn(
+                        new DateStringConverter());
+
+//        tableColumnExpirationDate.setCellFactory(col -> {
+//                TableCell<Bill, Date> cell = defaultTextFieldCellFactory.call(col);
+////                Bill bill = tableView.getItems().get(cell.getIndex());
+////                System.out.println("Bill: " + bill);
+//                cell.setStyle("-fx-background-color: red;");
+//                return cell;
+//        });
+
+        tableColumnExpirationDate.setCellFactory(
+            TextFieldTableCell.
+                    <Bill, Date>forTableColumn(new DateStringConverter()));
+
         tableColumnPaymentDate.setCellFactory(
             TextFieldTableCell.
                     <Bill, Date>forTableColumn(new DateStringConverter()));
-        
+
         tableColumnReceiver.setCellFactory(
             TextFieldTableCell.<Bill>forTableColumn());
-        
+
         tableColumnReceiverIban.setCellFactory(
             TextFieldTableCell.<Bill>forTableColumn());
-        
+
         tableColumnReferenceNumber.setCellFactory(
             TextFieldTableCell.<Bill>forTableColumn());
-        
+
         tableColumnBillNumber.setCellFactory(
             TextFieldTableCell.<Bill>forTableColumn());
-        
+
         tableColumnComment.setCellFactory(
             TextFieldTableCell.<Bill>forTableColumn());
-        
+
         tableColumnAmount.setOnEditCommit(
                 new EventHandler<CellEditEvent<Bill, Double>>() {
 
@@ -160,7 +163,7 @@ public class App extends Application {
                     }
                 }
         );
-        
+
         tableColumnDateReceived.setOnEditCommit(
                 new EventHandler<CellEditEvent<Bill, Date>>() {
 
@@ -173,21 +176,46 @@ public class App extends Application {
                 }
             }
         );
-        
+
         tableColumnExpirationDate.setOnEditCommit(
                 new EventHandler<CellEditEvent<Bill, Date>>() {
 
                 @Override
                 public void handle(CellEditEvent<Bill, Date> t) {
-                    ((Bill) t.getTableView()
-                             .getItems()
-                             .get(t.getTablePosition()
-                                   .getRow()))
-                             .setExpirationDate(t.getNewValue());
+                    // I NEED TO BE ABLE:
+                    // (1) Read the 'paymentDate' field of the same row.
+                    // (2) Change the color of the background of this 
+                    // 'expirationDate' cell, in this row.
+                    Bill bill = (Bill) t.getTableView()
+                                        .getItems()
+                                        .get(t.getTablePosition().getRow());
+
+                    bill.setExpirationDate(t.getNewValue());
+
+                    Date paymentDate = bill.getPaymentDate();
+                    long now = new Date().getTime();
+                    now -= now % MILLISECONDS_PER_DAY;
+
+                    long expirationMoment = bill.getExpirationDate().getTime();
+
+                    if (paymentDate == null) {
+                        long daysLeft = (expirationMoment - now) /
+                                         MILLISECONDS_PER_DAY;
+
+                    } else {
+                        long paymentMoment = paymentDate.getTime();
+                        paymentMoment -= paymentMoment % MILLISECONDS_PER_DAY;
+
+                        long days = (expirationMoment - paymentMoment) /
+                                     MILLISECONDS_PER_DAY;
+
+                        System.out.println("Days paid before: " + days);
+
+                    }
                 }
             }
         );
-        
+
         tableColumnPaymentDate.setOnEditCommit(
                 new EventHandler<CellEditEvent<Bill, Date>>() {
 
@@ -201,7 +229,7 @@ public class App extends Application {
                 }
             }
         );
-        
+
         tableColumnReceiver.setOnEditCommit(
                 new EventHandler<CellEditEvent<Bill, String>>() {
 
@@ -215,7 +243,7 @@ public class App extends Application {
                 }
             }
         );
-        
+
         tableColumnReceiverIban.setOnEditCommit(
                 new EventHandler<CellEditEvent<Bill, String>>() {
 
@@ -229,7 +257,7 @@ public class App extends Application {
                 }
             }
         );
-        
+
         tableColumnReferenceNumber.setOnEditCommit(
                 new EventHandler<CellEditEvent<Bill, String>>() {
 
@@ -243,7 +271,7 @@ public class App extends Application {
                 }
             }
         );
-        
+
         tableColumnBillNumber.setOnEditCommit(
                 new EventHandler<CellEditEvent<Bill, String>>() {
 
@@ -257,7 +285,7 @@ public class App extends Application {
                 }
             }
         );
-        
+
         tableColumnComment.setOnEditCommit(
                 new EventHandler<CellEditEvent<Bill, String>>() {
 
@@ -271,7 +299,7 @@ public class App extends Application {
                 }
             }
         );
-        
+
         tableView.getColumns().addAll(tableColumnAmount,
                                       tableColumnDateReceived,
                                       tableColumnExpirationDate,
@@ -283,20 +311,20 @@ public class App extends Application {
                                       tableColumnComment);
         setMenuActions();
         buildTablePopupMenu();
-        
+
         tableColumnAmount         .setPrefWidth(WINDOW_WIDTH / 10);
         tableColumnDateReceived   .setPrefWidth(2 * WINDOW_WIDTH / 10);
         tableColumnExpirationDate .setPrefWidth(WINDOW_WIDTH / 10);
-        
+
         tableColumnPaymentDate    .setPrefWidth(WINDOW_WIDTH / 10);
         tableColumnReceiver       .setPrefWidth(WINDOW_WIDTH / 10);
         tableColumnReceiverIban   .setPrefWidth(WINDOW_WIDTH / 10);
-        
+
         tableColumnReferenceNumber.setPrefWidth(WINDOW_WIDTH / 10);
         tableColumnBillNumber     .setPrefWidth(WINDOW_WIDTH / 10);
         tableColumnComment        .setPrefWidth(WINDOW_WIDTH / 10);
     }
-    
+
     @Override
     public void start(Stage stage) {
         stage.setTitle("New file");
@@ -314,7 +342,7 @@ public class App extends Application {
     public static void main(String[] args) {
         launch(args);
     }
-    
+
     private void buildMenu() {
         fileMenu.getItems().addAll(fileMenuNew,
                                    fileMenuOpen,
@@ -323,20 +351,20 @@ public class App extends Application {
                                    fileMenuClose,
                                    fileMenuAbout,
                                    fileMenuExit);
-        
+
         editMenu.getItems().addAll(editMenuNewBill, editMenuRemoveSelected);
         menuBar.getMenus().addAll(fileMenu, editMenu);
     }
-    
+
     private void setMenuActions() {
         editMenuNewBill.setOnAction((e) -> { 
             tableView.getItems().add(new Bill());
         });
-        
+
         tableMenuAddRow.setOnAction((e) -> {
             tableView.getItems().add(new Bill());
         });
-        
+
         tableMenuRemoveSelected.setOnAction((e) -> {
             List<Bill> selectedBillList = 
                     tableView.getSelectionModel().getSelectedItems();
@@ -344,10 +372,14 @@ public class App extends Application {
             tableView.getSelectionModel().clearSelection();
         });
     }
-    
+
     private void buildTablePopupMenu() {
-        
+
         tableView.setContextMenu(new ContextMenu(tableMenuAddRow,
                                                  tableMenuRemoveSelected));
+    }
+
+    private long getDateDifferenceInMilliseconds(Date before, Date after) {
+        return after.getTime() - before.getTime();
     }
 }
