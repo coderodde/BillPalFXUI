@@ -1,6 +1,12 @@
 package net.coderodde.billpal;
 
 import java.util.Date;
+import javafx.beans.property.DoubleProperty;
+import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.SimpleDoubleProperty;
+import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.property.SimpleStringProperty;
+import javafx.beans.property.StringProperty;
 
 /**
  * This class implements the data type for representing bills.
@@ -10,77 +16,106 @@ import java.util.Date;
  */
 public class Bill {
     
-    private double amount;
-    private Date dateReceived;
-    private Date expirationDate;
-    private Date paymentDate;
-    private String receiverIban;
-    private String referenceNumber;
-    private String billNumber;
-    private String comment;
+    private final DoubleProperty amount          = new SimpleDoubleProperty();
     
-    public double getAmount() {
-        return amount;
+    private final ObjectProperty<Date> dateReceived 
+      = new SimpleObjectProperty<>();
+    
+    private final ObjectProperty<Date> expirationDate 
+      = new SimpleObjectProperty<>();
+    
+    private final ObjectProperty<Date> paymentDate
+      = new SimpleObjectProperty<>();
+    
+    private final StringProperty receiverIban    = new SimpleStringProperty();
+    private final StringProperty referenceNumber = new SimpleStringProperty();
+    private final StringProperty billNumber      = new SimpleStringProperty();
+    private final StringProperty comment         = new SimpleStringProperty();
+    
+    public Bill() {
+        this(Double.NaN, null, null, null, "", "", "", "");
     }
     
-    public void setAmount(double amount) {
-        this.amount = amount;
+    public Bill(Double amount,
+                Date dateReceived,
+                Date expirationDate,
+                Date paymentDate,
+                String receiverIban,
+                String referenceNumber,
+                String billNumber,
+                String comment) {
+        setAmount(amount);
+        setDateReceived(dateReceived);
+        setExpirationDate(expirationDate);
+        setPaymentDate(paymentDate);
+        setReceiverIban(receiverIban);
+        setReferenceNumber(referenceNumber);
+        setBillNumber(billNumber);
+        setComment(comment);
+    }
+    
+    public Double getAmount() {
+        return amount.get();
+    }
+    
+    public void setAmount(Double amount) {
+        this.amount.set(amount);
     }
     
     public Date getDateReceived() {
-        return dateReceived;
+        return dateReceived.get();
     }
     
     public void setDateReceived(Date dateReceived) {
-        this.dateReceived = dateReceived;
+        this.dateReceived.set(dateReceived);
     }
     
     public Date getExpirationDate() {
-        return expirationDate;
+        return expirationDate.get();
     }
     
     public void setExpirationDate(Date expirationDate) {
-        this.expirationDate = expirationDate;
+        this.expirationDate.set(expirationDate);
     }
     
     public Date getPaymentDate() {
-        return paymentDate;
+        return paymentDate.get();
     }
     
     public void setPaymentDate(Date paymentDate) {
-        this.paymentDate = paymentDate;
+        this.paymentDate.set(paymentDate);
     }
     
     public String getReceiverIban() {
-        return receiverIban;
+        return receiverIban.get();
     }
     
     public void setReceiverIban(String receiverIban) {
-        this.receiverIban = receiverIban;
+        this.receiverIban.set(receiverIban);
     }
     
     public String getReferenceNumber() {
-        return referenceNumber;
+        return referenceNumber.get();
     }
     
     public void setReferenceNumber(String referenceNumber) {
-        this.referenceNumber = referenceNumber;
+        this.referenceNumber.set(referenceNumber);
     }
     
     public String getBillNumber() {
-        return billNumber;
+        return billNumber.get();
     }
     
     public void setBillNumber(String billNumber) {
-        this.billNumber = billNumber;
+        this.billNumber.set(billNumber);
     }
     
     public String getComment() {
-        return comment;
+        return comment.get();
     }
     
     public void setComment(String comment) {
-        this.comment = comment;
+        this.comment.set(comment);
     }
     
     @Override

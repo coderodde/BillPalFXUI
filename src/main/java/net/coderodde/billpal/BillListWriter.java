@@ -2,7 +2,6 @@ package net.coderodde.billpal;
 
 import java.io.OutputStream;
 import java.io.PrintWriter;
-import java.util.Date;
 import java.util.List;
 import java.util.Objects;
 
@@ -34,19 +33,15 @@ public class BillListWriter {
     private String convertBillToCSV(Bill bill) {
         StringBuilder sb = new StringBuilder();
         
-        sb.append(bill.getAmount())                       .append(COMMA);
-        sb.append(getDateString(bill.getDateReceived()))  .append(COMMA);
-        sb.append(getDateString(bill.getExpirationDate())).append(COMMA);
-        sb.append(getDateString(bill.getPaymentDate()))   .append(COMMA);
-        sb.append(bill.getReceiverIban())                 .append(COMMA);
-        sb.append(bill.getReferenceNumber())              .append(COMMA);
-        sb.append(bill.getBillNumber())                   .append(COMMA);
+        sb.append(bill.getAmount())                   .append(COMMA);
+        sb.append(bill.getDateReceived().getTime())   .append(COMMA);
+        sb.append(bill.getExpirationDate().getTime()) .append(COMMA);
+        sb.append(bill.getPaymentDate().getTime())    .append(COMMA);
+        sb.append(bill.getReceiverIban())             .append(COMMA);
+        sb.append(bill.getReferenceNumber())          .append(COMMA);
+        sb.append(bill.getBillNumber())               .append(COMMA);
         sb.append(bill.getComment());
         
         return sb.toString();
-    }
-    
-    private String getDateString(Date date) {
-        return date == null ? "null" : Long.toString(date.getTime());
     }
 }
