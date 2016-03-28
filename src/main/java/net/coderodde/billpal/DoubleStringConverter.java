@@ -13,15 +13,20 @@ public class DoubleStringConverter extends StringConverter<Double> {
 
     @Override
     public String toString(Double object) {
+        if (object == null) {
+            return "0.0";
+        }
+        
         return object.toString();
     }
 
     @Override
     public Double fromString(String string) {
         try {
+            string = string.replace(',', '.');
             return Double.parseDouble(string);
         } catch (NumberFormatException ex) {
-            return Double.NaN;
+            return 0.0;
         }
     }
 }

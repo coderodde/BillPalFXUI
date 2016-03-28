@@ -27,19 +27,21 @@ public class Bill {
     private final ObjectProperty<Date> paymentDate
       = new SimpleObjectProperty<>();
     
+    private final StringProperty receiver        = new SimpleStringProperty();
     private final StringProperty receiverIban    = new SimpleStringProperty();
     private final StringProperty referenceNumber = new SimpleStringProperty();
     private final StringProperty billNumber      = new SimpleStringProperty();
     private final StringProperty comment         = new SimpleStringProperty();
     
     public Bill() {
-        this(Double.NaN, null, null, null, "", "", "", "");
+        this(0.0, null, null, null, "", "", "", "", "");
     }
     
     public Bill(Double amount,
                 Date dateReceived,
                 Date expirationDate,
                 Date paymentDate,
+                String receiver,
                 String receiverIban,
                 String referenceNumber,
                 String billNumber,
@@ -48,6 +50,7 @@ public class Bill {
         setDateReceived(dateReceived);
         setExpirationDate(expirationDate);
         setPaymentDate(paymentDate);
+        setReceiver(receiver);
         setReceiverIban(receiverIban);
         setReferenceNumber(referenceNumber);
         setBillNumber(billNumber);
@@ -84,6 +87,14 @@ public class Bill {
     
     public void setPaymentDate(Date paymentDate) {
         this.paymentDate.set(paymentDate);
+    }
+    
+    public String getReceiver() {
+        return receiver.get();
+    }
+    
+    public void setReceiver(String receiver) {
+        this.receiver.set(receiver);
     }
     
     public String getReceiverIban() {

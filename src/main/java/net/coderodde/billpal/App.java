@@ -1,13 +1,16 @@
 package net.coderodde.billpal;
 
 import java.util.Date;
+import java.util.List;
 import javafx.application.Application;
 import static javafx.application.Application.launch;
 import javafx.event.EventHandler;
 import javafx.scene.Scene;
+import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
+import javafx.scene.control.SelectionMode;
 import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableColumn.CellEditEvent;
@@ -20,8 +23,8 @@ import javafx.util.Callback;
 
 public class App extends Application {
 
-    private static final int WINDOW_WIDTH  = 640;
-    private static final int WINDOW_HEIGHT = 480;
+    private static final int WINDOW_WIDTH  = 800;
+    private static final int WINDOW_HEIGHT = 600;
     
     private final TableView<Bill> tableView = new TableView<>();
     
@@ -30,6 +33,7 @@ public class App extends Application {
     private final TableColumn<Bill, Date>   tableColumnDateReceived;
     private final TableColumn<Bill, Date>   tableColumnExpirationDate;
     private final TableColumn<Bill, Date>   tableColumnPaymentDate;
+    private final TableColumn<Bill, String> tableColumnReceiver;
     private final TableColumn<Bill, String> tableColumnReceiverIban;
     private final TableColumn<Bill, String> tableColumnReferenceNumber;
     private final TableColumn<Bill, String> tableColumnBillNumber;
@@ -50,6 +54,11 @@ public class App extends Application {
     private final MenuItem editMenuRemoveSelected =
               new MenuItem("Remove selected");
     
+    // Table menu:
+    private final MenuItem tableMenuAddRow = new MenuItem("Add new row");
+    private final MenuItem tableMenuRemoveSelected = 
+              new MenuItem("Remove selected");
+    
     // Other:
     private final BorderPane rootPane = new BorderPane();
     private final Scene scene = new Scene(rootPane);
@@ -59,6 +68,7 @@ public class App extends Application {
         this.tableColumnDateReceived    = new TableColumn<>("Date received");
         this.tableColumnExpirationDate  = new TableColumn<>("Expires");
         this.tableColumnPaymentDate     = new TableColumn<>("Paid");
+        this.tableColumnReceiver        = new TableColumn<>("Receiver");
         this.tableColumnReceiverIban    = new TableColumn<>("IBAN");
         this.tableColumnReferenceNumber = new TableColumn<>("Reference");
         this.tableColumnBillNumber      = new TableColumn<>("Bill number");
@@ -111,6 +121,9 @@ public class App extends Application {
         tableColumnPaymentDate.setCellFactory(
             TextFieldTableCell.
                     <Bill, Date>forTableColumn(new DateStringConverter()));
+        
+        tableColumnReceiver.setCellFactory(
+            TextFieldTableCell.<Bill>forTableColumn());
         
         tableColumnReceiverIban.setCellFactory(
             TextFieldTableCell.<Bill>forTableColumn());
@@ -178,6 +191,20 @@ public class App extends Application {
             }
         );
         
+        tableColumnReceiver.setOnEditCommit(
+                new EventHandler<CellEditEvent<Bill, String>>() {
+
+                @Override
+                public void handle(CellEditEvent<Bill, String> t) {
+                    ((Bill) t.getTableView()
+                             .getItems()
+                             .get(t.getTablePosition()
+                                   .getRow()))
+                             .setReceiver(t.getNewValue());
+                }
+            }
+        );
+        
         tableColumnReceiverIban.setOnEditCommit(
                 new EventHandler<CellEditEvent<Bill, String>>() {
 
@@ -238,16 +265,18 @@ public class App extends Application {
                                       tableColumnDateReceived,
                                       tableColumnExpirationDate,
                                       tableColumnPaymentDate,
+                                      tableColumnReceiver,
                                       tableColumnReceiverIban,
                                       tableColumnReferenceNumber,
                                       tableColumnBillNumber,
                                       tableColumnComment);
         setMenuActions();
+        buildTablePopupMenu();
     }
     
     @Override
     public void start(Stage stage) {
-        stage.setTitle("Title");
+        stage.setTitle("New file");
         stage.setWidth(WINDOW_WIDTH);
         stage.setHeight(WINDOW_HEIGHT);
         buildMenu();
@@ -255,6 +284,7 @@ public class App extends Application {
         rootPane.setCenter(tableView);
         stage.setScene(scene);
         tableView.setEditable(true);
+        tableView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
         stage.show();
     }
 
@@ -279,5 +309,22 @@ public class App extends Application {
         editMenuNewBill.setOnAction((e) -> { 
             tableView.getItems().add(new Bill());
         });
+        
+        tableMenuAddRow.setOnAction((e) -> {
+            tableView.getItems().add(new Bill());
+        });
+        
+        tableMenuRemoveSelected.setOnAction((e) -> {
+            List<Bill> selectedBillList = 
+                    tableView.getSelectionModel().getSelectedItems();
+            tableView.getItems().removeAll(selectedBillList);
+            tableView.getSelectionModel().clearSelection();
+        });
+    }
+    
+    private void buildTablePopupMenu() {
+        
+        tableView.setContextMenu(new ContextMenu(tableMenuAddRow,
+                                                 tableMenuRemoveSelected));
     }
 }

@@ -20,7 +20,7 @@ public class DateStringConverter extends StringConverter<Date> {
     @Override
     public String toString(Date object) {
         if (object == null) {
-            object = new Date();
+            return "";
         }
         
         return DATE_FORMAT.format(object);
