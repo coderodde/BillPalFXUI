@@ -272,6 +272,18 @@ public class App extends Application {
                                       tableColumnComment);
         setMenuActions();
         buildTablePopupMenu();
+        
+        tableColumnAmount         .setPrefWidth(WINDOW_WIDTH / 10);
+        tableColumnDateReceived   .setPrefWidth(2 * WINDOW_WIDTH / 10);
+        tableColumnExpirationDate .setPrefWidth(WINDOW_WIDTH / 10);
+        
+        tableColumnPaymentDate    .setPrefWidth(WINDOW_WIDTH / 10);
+        tableColumnReceiver       .setPrefWidth(WINDOW_WIDTH / 10);
+        tableColumnReceiverIban   .setPrefWidth(WINDOW_WIDTH / 10);
+        
+        tableColumnReferenceNumber.setPrefWidth(WINDOW_WIDTH / 10);
+        tableColumnBillNumber     .setPrefWidth(WINDOW_WIDTH / 10);
+        tableColumnComment        .setPrefWidth(WINDOW_WIDTH / 10);
     }
     
     @Override
