@@ -18,6 +18,7 @@ import javafx.scene.control.TableView;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.control.cell.TextFieldTableCell;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 import javafx.util.Callback;
 
@@ -30,10 +31,10 @@ public class App extends Application {
     private final TableView<Bill> tableView = new TableView<>();
 
     // Table columns:
-    private final TableColumn<Bill, Double> tableColumnAmount;
-    private final TableColumn<Bill, Date>   tableColumnDateReceived;
     private final TableColumn<Bill, Date>   tableColumnExpirationDate;
     private final TableColumn<Bill, Date>   tableColumnPaymentDate;
+    private final TableColumn<Bill, Double> tableColumnAmount;
+    private final TableColumn<Bill, Date>   tableColumnDateReceived;
     private final TableColumn<Bill, String> tableColumnReceiver;
     private final TableColumn<Bill, String> tableColumnReceiverIban;
     private final TableColumn<Bill, String> tableColumnReferenceNumber;
@@ -65,10 +66,10 @@ public class App extends Application {
     private final Scene scene = new Scene(rootPane);
 
     public App() {
-        this.tableColumnAmount          = new TableColumn<>("Amount");
-        this.tableColumnDateReceived    = new TableColumn<>("Date received");
         this.tableColumnExpirationDate  = new TableColumn<>("Expires");
         this.tableColumnPaymentDate     = new TableColumn<>("Paid");
+        this.tableColumnAmount          = new TableColumn<>("Amount");
+        this.tableColumnDateReceived    = new TableColumn<>("Date received");
         this.tableColumnReceiver        = new TableColumn<>("Receiver");
         this.tableColumnReceiverIban    = new TableColumn<>("IBAN");
         this.tableColumnReferenceNumber = new TableColumn<>("Reference");
@@ -114,23 +115,6 @@ public class App extends Application {
         tableColumnDateReceived.setCellFactory(
             TextFieldTableCell.
                     <Bill, Date>forTableColumn(new DateStringConverter()));
-
-        tableColumnExpirationDate.setCellFactory(col -> {
-                System.out.println("shittt");
-
-        Callback<TableColumn<Bill, Date>, TableCell<Bill, Date>>
-                defaultTextFieldCellFactory = 
-                TextFieldTableCell.<Bill, Date>forTableColumn(
-                        new DateStringConverter());
-        
-                TableCell<Bill, Date> cell = defaultTextFieldCellFactory.call(col);
-                cell.setStyle("-fx-background-color: red;");
-                cell.setText("fdsafs");
-//                Bill bill = tableView.getItems().get(cell.getIndex());
-//                System.out.println("Bill: " + bill);
-                return cell;
-        });
-
         
         class FunkyCellFactory implements Callback<TableColumn<Bill, Date>, TableCell<Bill, Date>> {
 
@@ -146,13 +130,45 @@ public class App extends Application {
                     public void updateItem(Date date, boolean empty) {
                         super.updateItem(date, empty);
                         Bill bill = (Bill) this.getTableRow().getItem();
-                        System.out.println("Yeah: " + bill);
                         
-                        if (bill != null && bill.getAmount() < 2.0) {
-                            this.setStyle("-fx-background-color: red;");
-                        } else {
-                            this.setStyle("-fx-background-color: blue;");
+                        if (bill == null) {
+                            return;
                         }
+                        
+                        Date expirationDate = bill.getExpirationDate();
+                        
+                        if (expirationDate == null) {
+                            System.out.println("Expiration date is null.");
+                            return;
+                        }
+                        
+                        Date paymentDate = bill.getPaymentDate();
+                        
+                        if (paymentDate == null) {
+                            long now = new Date().getTime();
+                            now -= now % MILLISECONDS_PER_DAY;
+                            
+                            long expirationMoment = expirationDate.getTime();
+                            expirationMoment -= expirationMoment % 
+                                                MILLISECONDS_PER_DAY;
+                            
+                            long daysLeft = (expirationMoment - now) /
+                                            MILLISECONDS_PER_DAY;
+                            
+                            String colorString = getCellStyle(daysLeft);
+                            
+                            if (colorString == null) {
+                                this.setStyle("");
+                            } else {
+                                this.setStyle("-fx-background-color: " + colorString);
+                            }
+                        }
+                        
+//                        if (bill != null && bill.getAmount() < 2.0) {
+//                            this.setStyle("-fx-background-color: red;");
+//                        } else {
+//                            this.setStyle(""); // Go back to default style.
+//                        }
 //                        if (!empty) {
 //                            this.setText(date.toString());
 //                            Bill bill = (Bill) this.getTableRow().getItem();
@@ -349,23 +365,26 @@ public class App extends Application {
             }
         );
 
-        tableView.getColumns().addAll(tableColumnAmount,
-                                      tableColumnDateReceived,
-                                      tableColumnExpirationDate,
+        tableView.getColumns().addAll(tableColumnExpirationDate,
                                       tableColumnPaymentDate,
+                                      tableColumnAmount,
+                                      
+                                      tableColumnDateReceived,
                                       tableColumnReceiver,
                                       tableColumnReceiverIban,
+                                      
                                       tableColumnReferenceNumber,
                                       tableColumnBillNumber,
                                       tableColumnComment);
+
         setMenuActions();
         buildTablePopupMenu();
 
-        tableColumnAmount         .setPrefWidth(WINDOW_WIDTH / 10);
-        tableColumnDateReceived   .setPrefWidth(2 * WINDOW_WIDTH / 10);
         tableColumnExpirationDate .setPrefWidth(WINDOW_WIDTH / 10);
-
         tableColumnPaymentDate    .setPrefWidth(WINDOW_WIDTH / 10);
+        tableColumnAmount         .setPrefWidth(WINDOW_WIDTH / 10);
+
+        tableColumnDateReceived   .setPrefWidth(2 * WINDOW_WIDTH / 10);
         tableColumnReceiver       .setPrefWidth(WINDOW_WIDTH / 10);
         tableColumnReceiverIban   .setPrefWidth(WINDOW_WIDTH / 10);
 
@@ -427,7 +446,27 @@ public class App extends Application {
                                                  tableMenuRemoveSelected));
     }
 
-    private long getDateDifferenceInMilliseconds(Date before, Date after) {
-        return after.getTime() - before.getTime();
+    private String getCellStyle(long daysLeft) {
+        if (daysLeft <= 0L) {
+            // The bill expires today or expired already. Color red.
+            return "red";
+        } else if (daysLeft > 7L) {
+            // null means clear the table cell style, thus using default colors.
+            return null;
+        }
+        
+        int delta = 256 / 8;
+        int deltas = (int) daysLeft * delta;
+        
+        int r = 255;
+        int g = deltas;
+        int b = deltas;
+        
+        StringBuilder sb = new StringBuilder("#");
+        sb.append(Integer.toHexString(r));
+        sb.append(Integer.toHexString(g));
+        sb.append(Integer.toHexString(b));
+        sb.append("; -fx-color: black;");
+        return sb.toString(); 
     }
 }
