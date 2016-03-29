@@ -115,22 +115,68 @@ public class App extends Application {
             TextFieldTableCell.
                     <Bill, Date>forTableColumn(new DateStringConverter()));
 
+        tableColumnExpirationDate.setCellFactory(col -> {
+                System.out.println("shittt");
+
         Callback<TableColumn<Bill, Date>, TableCell<Bill, Date>>
                 defaultTextFieldCellFactory = 
                 TextFieldTableCell.<Bill, Date>forTableColumn(
                         new DateStringConverter());
+        
+                TableCell<Bill, Date> cell = defaultTextFieldCellFactory.call(col);
+                cell.setStyle("-fx-background-color: red;");
+                cell.setText("fdsafs");
+//                Bill bill = tableView.getItems().get(cell.getIndex());
+//                System.out.println("Bill: " + bill);
+                return cell;
+        });
 
-//        tableColumnExpirationDate.setCellFactory(col -> {
-//                TableCell<Bill, Date> cell = defaultTextFieldCellFactory.call(col);
-////                Bill bill = tableView.getItems().get(cell.getIndex());
-////                System.out.println("Bill: " + bill);
-//                cell.setStyle("-fx-background-color: red;");
-//                return cell;
-//        });
+        
+        class FunkyCellFactory implements Callback<TableColumn<Bill, Date>, TableCell<Bill, Date>> {
 
-        tableColumnExpirationDate.setCellFactory(
-            TextFieldTableCell.
-                    <Bill, Date>forTableColumn(new DateStringConverter()));
+            @Override
+            public TableCell<Bill, Date> call(TableColumn<Bill, Date> column) {
+                return createTableCell(column);
+            }
+
+
+            private TextFieldTableCell<Bill, Date> createTableCell(TableColumn<Bill, Date> col) {
+                TextFieldTableCell<Bill, Date> cell = new TextFieldTableCell<Bill, Date>(new DateStringConverter()) {
+                    @Override
+                    public void updateItem(Date date, boolean empty) {
+                        super.updateItem(date, empty);
+                        Bill bill = (Bill) this.getTableRow().getItem();
+                        System.out.println("Yeah: " + bill);
+                        
+                        if (bill != null && bill.getAmount() < 2.0) {
+                            this.setStyle("-fx-background-color: red;");
+                        } else {
+                            this.setStyle("-fx-background-color: blue;");
+                        }
+//                        if (!empty) {
+//                            this.setText(date.toString());
+//                            Bill bill = (Bill) this.getTableRow().getItem();
+//                            
+//                            if (pomObject != null && pomObject.getParseError()) {
+//                                this.setTextFill(Color.RED);
+//                                this.setEditable(false);
+//                            } else {
+//                                this.setTextFill(Color.BLACK);
+//                                this.setEditable(true);
+//                            }
+//                        } else {
+//                            this.setText(null);  // clear from recycled obj                    
+//                            this.setTextFill(Color.BLACK);
+//                            this.setEditable(true);
+//                        }
+                    }
+                };
+                
+                return cell;
+            }
+        }
+        
+        tableColumnExpirationDate.setCellFactory(new FunkyCellFactory());
 
         tableColumnPaymentDate.setCellFactory(
             TextFieldTableCell.
@@ -176,7 +222,7 @@ public class App extends Application {
                 }
             }
         );
-
+        
         tableColumnExpirationDate.setOnEditCommit(
                 new EventHandler<CellEditEvent<Bill, Date>>() {
 
@@ -191,27 +237,30 @@ public class App extends Application {
                                         .get(t.getTablePosition().getRow());
 
                     bill.setExpirationDate(t.getNewValue());
-
-                    Date paymentDate = bill.getPaymentDate();
-                    long now = new Date().getTime();
-                    now -= now % MILLISECONDS_PER_DAY;
-
-                    long expirationMoment = bill.getExpirationDate().getTime();
-
-                    if (paymentDate == null) {
-                        long daysLeft = (expirationMoment - now) /
-                                         MILLISECONDS_PER_DAY;
-
-                    } else {
-                        long paymentMoment = paymentDate.getTime();
-                        paymentMoment -= paymentMoment % MILLISECONDS_PER_DAY;
-
-                        long days = (expirationMoment - paymentMoment) /
-                                     MILLISECONDS_PER_DAY;
-
-                        System.out.println("Days paid before: " + days);
-
-                    }
+//
+//                    Date paymentDate = bill.getPaymentDate();
+//                    long now = new Date().getTime();
+//                    now -= now % MILLISECONDS_PER_DAY;
+//
+//                    long expirationMoment = bill.getExpirationDate().getTime();
+//
+//                    if (paymentDate == null) {
+//                        long daysLeft = (expirationMoment - now) /
+//                                         MILLISECONDS_PER_DAY;
+//
+//                    } else {
+//                        long paymentMoment = paymentDate.getTime();
+//                        paymentMoment -= paymentMoment % MILLISECONDS_PER_DAY;
+//
+//                        long days = (expirationMoment - paymentMoment) /
+//                                     MILLISECONDS_PER_DAY;
+//
+//                        System.out.println("Days paid before: " + days); 
+//                    }
+//                    
+//                    System.out.println("Source: " + t.getSource());
+//                    System.out.println("Target: " + t.getTarget());
+//                    
                 }
             }
         );
@@ -374,7 +423,6 @@ public class App extends Application {
     }
 
     private void buildTablePopupMenu() {
-
         tableView.setContextMenu(new ContextMenu(tableMenuAddRow,
                                                  tableMenuRemoveSelected));
     }
