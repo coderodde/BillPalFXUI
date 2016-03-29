@@ -6,8 +6,6 @@ import java.util.Date;
 import java.util.List;
 import javafx.application.Application;
 import static javafx.application.Application.launch;
-import javafx.collections.FXCollections;
-import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
 import javafx.scene.Scene;
 import javafx.scene.control.ContextMenu;
@@ -30,7 +28,8 @@ public class App extends Application {
     private static final int WINDOW_WIDTH  = 800;
     private static final int WINDOW_HEIGHT = 600;
     private static final long MILLISECONDS_PER_DAY = 24 * 60 * 60 * 1000;
-
+    private static final long MILLISECONDS_PER_WEEK = 7 * MILLISECONDS_PER_DAY;
+    
     private final TableView<Bill> tableView = new TableView<>();
 
     // Table columns:
@@ -152,17 +151,12 @@ public class App extends Application {
                         
                         if (paymentDate == null) {
                             long now = new Date().getTime();
-                            now -= now % MILLISECONDS_PER_DAY;
-                            
                             long expirationMoment = expirationDate.getTime();
-                            expirationMoment -= expirationMoment % 
-                                                MILLISECONDS_PER_DAY;
-                            expirationMoment += MILLISECONDS_PER_DAY;
+                            long millisecondsLeft = expirationMoment - now;
                             
-                            long daysLeft = (expirationMoment - now) /
-                                            MILLISECONDS_PER_DAY;
+                            System.out.println("millis left: " + millisecondsLeft);
                             
-                            String cellStyle = getCellStyle(daysLeft);
+                            String cellStyle = getCellStyle(millisecondsLeft);
                             this.setStyle(cellStyle);
                             System.out.println("style: " + cellStyle);
                         } else {
@@ -268,8 +262,15 @@ public class App extends Application {
                     Bill bill = (Bill) t.getTableView()
                                         .getItems()
                                         .get(t.getTablePosition().getRow());
-
-                    bill.setExpirationDate(t.getNewValue());
+                    Date date = t.getNewValue();
+                    Calendar cal = Calendar.getInstance();
+                    cal.setTime(date);
+                    
+                    cal.set(Calendar.HOUR, 0);
+                    cal.set(Calendar.MINUTE, 0);
+                    cal.set(Calendar.SECOND, 0);
+                    
+                    bill.setExpirationDate(cal.getTime());
                 }
             }
         );
@@ -285,21 +286,12 @@ public class App extends Application {
                                  .getRow());
                     
                     bill.setPaymentDate(t.getNewValue());
-                         
-                    // The following two rows make the expiration cell colors
-                    // updated.
-//                    t.getTableView().getColumns().get(0).setVisible(false);
-//                    t.getTableView().getColumns().get(0).setVisible(true);
-//                    t.getTableView().getColumns().get(0).setStyle(
-//                            t.getTableView().getColumns().get(0).getStyle());
-//                    TableColumn<Bill, ?> column = tableView.getColumns().remove(0);
-//                    tableView.getColumns().add(0, column);
                     
-//                    int index = tableView.getItems().indexOf(bill);
-//                    tableView.getItems().remove(index);
-//                    tableView.getItems().add(index, bill);
-                    tableView.getProperties().put(TableViewSkinBase.RECREATE, Boolean.TRUE);
-                    System.out.println("items: " + t.getTableView().getItems().size());
+                    // A magic spell needed for updating the background color of 
+                    // the expiration date cell whenever the corresponding 
+                    // payment date cell is edited.
+                    tableView.getProperties().put(TableViewSkinBase.RECREATE,
+                                                  Boolean.TRUE);
                 }
             }
         );
@@ -454,29 +446,46 @@ public class App extends Application {
         tableView.setContextMenu(new ContextMenu(tableMenuAddRow,
                                                  tableMenuRemoveSelected));
     }
-
-    private String getCellStyle(long daysLeft) {
-        if (daysLeft < 0L) {
-            // The bill expires today or expired already. Color red.
+    
+    private String getCellStyle(long millisecondsLeft) {
+        if (millisecondsLeft <= 0L) {
             return "-fx-background-color: red; -fx-text-fill: black;" +
                    "-fx-font-weight: bold;";
-        } else if (daysLeft > 7L) {
+            
+        }
+        
+        float f = (1.0f * millisecondsLeft) / (MILLISECONDS_PER_WEEK);
+        
+        if (f >= 1.0f) {
             // "" means clear the table cell style, thus using default colors.
             return "";
         }
         
-        int delta = 256 / 8;
-        int deltas = (int)(daysLeft + 1) * delta;
-        
         int r = 255;
-        int g = deltas;
-        int b = deltas;
+        int g = (int)(255 * f);
+        int b = (int)(255 * f);
+        
+        System.out.println("f = " + f);
         
         StringBuilder sb = new StringBuilder("-fx-background-color: #");
         sb.append(Integer.toHexString(r));
-        sb.append(Integer.toHexString(g));
-        sb.append(Integer.toHexString(b));
+        sb.append(handleLeadingZero(Integer.toHexString(g)));
+        sb.append(handleLeadingZero(Integer.toHexString(b)));
         sb.append("; -fx-text-fill: black; -fx-font-weight: bold;");
         return sb.toString(); 
+    }
+    
+    private String handleLeadingZero(String s) {
+        switch (s.length()) {
+            case 1:
+                return "0" + s;
+                
+            case 2:
+                return s;
+                
+            default:
+                throw new IllegalStateException(
+                        "Should not get here. Please debug.");
+        }
     }
 }
