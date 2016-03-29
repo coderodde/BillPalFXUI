@@ -1,5 +1,6 @@
 package net.coderodde.billpal;
 
+import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import javafx.application.Application;
@@ -18,7 +19,6 @@ import javafx.scene.control.TableView;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.control.cell.TextFieldTableCell;
 import javafx.scene.layout.BorderPane;
-import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 import javafx.util.Callback;
 
@@ -76,6 +76,8 @@ public class App extends Application {
         this.tableColumnBillNumber      = new TableColumn<>("Bill number");
         this.tableColumnComment         = new TableColumn<>("Comment");
 
+        tableColumnExpirationDate.setStyle("-fx-font-weight: bold;");
+        
         tableColumnAmount.setCellValueFactory(
                 new PropertyValueFactory<>("amount")
         );
@@ -151,40 +153,55 @@ public class App extends Application {
                             long expirationMoment = expirationDate.getTime();
                             expirationMoment -= expirationMoment % 
                                                 MILLISECONDS_PER_DAY;
+                            expirationMoment += MILLISECONDS_PER_DAY;
                             
                             long daysLeft = (expirationMoment - now) /
                                             MILLISECONDS_PER_DAY;
                             
-                            String colorString = getCellStyle(daysLeft);
+                            String cellStyle = getCellStyle(daysLeft);
+                            this.setStyle(cellStyle);
+                            System.out.println("style: " + cellStyle);
+                        } else {
+                            // paymentDate not null here.
+                            Calendar cPayment = Calendar.getInstance();
+                            Calendar cExpiration = Calendar.getInstance();
+                            cPayment.setTime(paymentDate);
+                            cExpiration.setTime(expirationDate);
                             
-                            if (colorString == null) {
-                                this.setStyle("");
+                            int paymentYear = cPayment.get(Calendar.YEAR);
+                            int expirationYear = cExpiration.get(Calendar.YEAR);
+                            
+                            if (paymentYear > expirationYear) {
+                                this.setStyle("-fx-background-color: #aaaaaa;");
+                                return;
+                            } else if (paymentYear < expirationYear) {
+                                this.setStyle("-fx-background-color:#aaaaff");
+                                return;
+                            }
+                            
+                            int paymentMonth = cPayment.get(Calendar.MONTH);
+                            int expirationMonth = 
+                                    cExpiration.get(Calendar.MONTH);
+                            
+                            if (paymentMonth > expirationMonth) {
+                                this.setStyle("-fx-background-color: #aaaaaa;");
+                                return;
+                            } else if (paymentMonth < expirationMonth) {
+                                this.setStyle("-fx-background-color:#aaaaff");
+                                return;
+                            }
+                            
+                            int paymentDay = 
+                                    cPayment.get(Calendar.DAY_OF_MONTH);
+                            int expirationDay = 
+                                    cExpiration.get(Calendar.DAY_OF_MONTH);
+                            
+                            if (paymentDay > expirationDay) {
+                                this.setStyle("-fx-background-color: #aaaaaa;");
                             } else {
-                                this.setStyle("-fx-background-color: " + colorString);
+                                this.setStyle("-fx-background-color:#aaaaff");
                             }
                         }
-                        
-//                        if (bill != null && bill.getAmount() < 2.0) {
-//                            this.setStyle("-fx-background-color: red;");
-//                        } else {
-//                            this.setStyle(""); // Go back to default style.
-//                        }
-//                        if (!empty) {
-//                            this.setText(date.toString());
-//                            Bill bill = (Bill) this.getTableRow().getItem();
-//                            
-//                            if (pomObject != null && pomObject.getParseError()) {
-//                                this.setTextFill(Color.RED);
-//                                this.setEditable(false);
-//                            } else {
-//                                this.setTextFill(Color.BLACK);
-//                                this.setEditable(true);
-//                            }
-//                        } else {
-//                            this.setText(null);  // clear from recycled obj                    
-//                            this.setTextFill(Color.BLACK);
-//                            this.setEditable(true);
-//                        }
                     }
                 };
                 
@@ -447,26 +464,27 @@ public class App extends Application {
     }
 
     private String getCellStyle(long daysLeft) {
-        if (daysLeft <= 0L) {
+        if (daysLeft < 0L) {
             // The bill expires today or expired already. Color red.
-            return "red";
+            return "-fx-background-color: red; -fx-text-fill: black;" +
+                   "-fx-font-weight: bold;";
         } else if (daysLeft > 7L) {
-            // null means clear the table cell style, thus using default colors.
-            return null;
+            // "" means clear the table cell style, thus using default colors.
+            return "";
         }
         
         int delta = 256 / 8;
-        int deltas = (int) daysLeft * delta;
+        int deltas = (int)(daysLeft + 1) * delta;
         
         int r = 255;
         int g = deltas;
         int b = deltas;
         
-        StringBuilder sb = new StringBuilder("#");
+        StringBuilder sb = new StringBuilder("-fx-background-color: #");
         sb.append(Integer.toHexString(r));
         sb.append(Integer.toHexString(g));
         sb.append(Integer.toHexString(b));
-        sb.append("; -fx-color: black;");
+        sb.append("; -fx-text-fill: black; -fx-font-weight: bold;");
         return sb.toString(); 
     }
 }
