@@ -1,10 +1,13 @@
 package net.coderodde.billpal;
 
+import com.sun.javafx.scene.control.skin.TableViewSkinBase;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import javafx.application.Application;
 import static javafx.application.Application.launch;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.event.EventHandler;
 import javafx.scene.Scene;
 import javafx.scene.control.ContextMenu;
@@ -122,6 +125,7 @@ public class App extends Application {
 
             @Override
             public TableCell<Bill, Date> call(TableColumn<Bill, Date> column) {
+                System.out.println("shit is here!");
                 return createTableCell(column);
             }
 
@@ -172,10 +176,10 @@ public class App extends Application {
                             int expirationYear = cExpiration.get(Calendar.YEAR);
                             
                             if (paymentYear > expirationYear) {
-                                this.setStyle("-fx-background-color: #aaaaaa;");
+                                this.setStyle("-fx-background-color: #2db6e3;");
                                 return;
                             } else if (paymentYear < expirationYear) {
-                                this.setStyle("-fx-background-color:#aaaaff");
+                                this.setStyle("-fx-background-color: #0be633");
                                 return;
                             }
                             
@@ -184,10 +188,10 @@ public class App extends Application {
                                     cExpiration.get(Calendar.MONTH);
                             
                             if (paymentMonth > expirationMonth) {
-                                this.setStyle("-fx-background-color: #aaaaaa;");
+                                this.setStyle("-fx-background-color: #2db6e3;");
                                 return;
                             } else if (paymentMonth < expirationMonth) {
-                                this.setStyle("-fx-background-color:#aaaaff");
+                                this.setStyle("-fx-background-color: #0be633");
                                 return;
                             }
                             
@@ -197,9 +201,9 @@ public class App extends Application {
                                     cExpiration.get(Calendar.DAY_OF_MONTH);
                             
                             if (paymentDay > expirationDay) {
-                                this.setStyle("-fx-background-color: #aaaaaa;");
+                                this.setStyle("-fx-background-color: #2db6e3;");
                             } else {
-                                this.setStyle("-fx-background-color:#aaaaff");
+                                this.setStyle("-fx-background-color: #0be633");
                             }
                         }
                     }
@@ -261,39 +265,11 @@ public class App extends Application {
 
                 @Override
                 public void handle(CellEditEvent<Bill, Date> t) {
-                    // I NEED TO BE ABLE:
-                    // (1) Read the 'paymentDate' field of the same row.
-                    // (2) Change the color of the background of this 
-                    // 'expirationDate' cell, in this row.
                     Bill bill = (Bill) t.getTableView()
                                         .getItems()
                                         .get(t.getTablePosition().getRow());
 
                     bill.setExpirationDate(t.getNewValue());
-//
-//                    Date paymentDate = bill.getPaymentDate();
-//                    long now = new Date().getTime();
-//                    now -= now % MILLISECONDS_PER_DAY;
-//
-//                    long expirationMoment = bill.getExpirationDate().getTime();
-//
-//                    if (paymentDate == null) {
-//                        long daysLeft = (expirationMoment - now) /
-//                                         MILLISECONDS_PER_DAY;
-//
-//                    } else {
-//                        long paymentMoment = paymentDate.getTime();
-//                        paymentMoment -= paymentMoment % MILLISECONDS_PER_DAY;
-//
-//                        long days = (expirationMoment - paymentMoment) /
-//                                     MILLISECONDS_PER_DAY;
-//
-//                        System.out.println("Days paid before: " + days); 
-//                    }
-//                    
-//                    System.out.println("Source: " + t.getSource());
-//                    System.out.println("Target: " + t.getTarget());
-//                    
                 }
             }
         );
@@ -303,11 +279,27 @@ public class App extends Application {
 
                 @Override
                 public void handle(CellEditEvent<Bill, Date> t) {
-                    ((Bill) t.getTableView()
-                             .getItems()
-                             .get(t.getTablePosition()
-                                   .getRow()))
-                             .setPaymentDate(t.getNewValue());
+                    Bill bill = t.getTableView()
+                                 .getItems()
+                                 .get(t.getTablePosition()
+                                 .getRow());
+                    
+                    bill.setPaymentDate(t.getNewValue());
+                         
+                    // The following two rows make the expiration cell colors
+                    // updated.
+//                    t.getTableView().getColumns().get(0).setVisible(false);
+//                    t.getTableView().getColumns().get(0).setVisible(true);
+//                    t.getTableView().getColumns().get(0).setStyle(
+//                            t.getTableView().getColumns().get(0).getStyle());
+//                    TableColumn<Bill, ?> column = tableView.getColumns().remove(0);
+//                    tableView.getColumns().add(0, column);
+                    
+//                    int index = tableView.getItems().indexOf(bill);
+//                    tableView.getItems().remove(index);
+//                    tableView.getItems().add(index, bill);
+                    tableView.getProperties().put(TableViewSkinBase.RECREATE, Boolean.TRUE);
+                    System.out.println("items: " + t.getTableView().getItems().size());
                 }
             }
         );
