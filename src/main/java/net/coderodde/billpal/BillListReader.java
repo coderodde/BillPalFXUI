@@ -64,19 +64,23 @@ public class BillListReader {
         }
         
         if (tokens.length >= 5) {
-            bill.setReceiverIban(tokens[4]);
+            bill.setReceiver(tokens[4]);
         }
         
         if (tokens.length >= 6) {
-            bill.setReferenceNumber(tokens[5]);
+            bill.setReceiverIban(tokens[5]);
         }
         
         if (tokens.length >= 7) {
-            bill.setBillNumber(tokens[6]);
+            bill.setReferenceNumber(tokens[6]);
         }
         
         if (tokens.length >= 8) {
-            bill.setComment(tokens[7]);
+            bill.setBillNumber(tokens[7]);
+        }
+        
+        if (tokens.length >= 9) {
+            bill.setBillNumber(tokens[8]);
         }
         
         return bill;

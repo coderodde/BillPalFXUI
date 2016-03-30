@@ -1,13 +1,19 @@
 package net.coderodde.billpal;
 
 import com.sun.javafx.scene.control.skin.TableViewSkinBase;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import javafx.application.Application;
 import static javafx.application.Application.launch;
+import javafx.collections.ListChangeListener;
 import javafx.event.EventHandler;
 import javafx.scene.Scene;
+import javafx.scene.control.Alert;
+import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
@@ -67,6 +73,10 @@ public class App extends Application {
     private final BorderPane rootPane = new BorderPane();
     private final Scene scene = new Scene(rootPane);
 
+    // File state.
+    private boolean fileStateChanged = false;
+    private File currentFile;
+    
     public App() {
         this.tableColumnExpirationDate  = new TableColumn<>("Expires");
         this.tableColumnPaymentDate     = new TableColumn<>("Paid");
@@ -131,6 +141,7 @@ public class App extends Application {
 
             private TextFieldTableCell<Bill, Date> createTableCell(TableColumn<Bill, Date> col) {
                 TextFieldTableCell<Bill, Date> cell = new TextFieldTableCell<Bill, Date>(new DateStringConverter()) {
+                    
                     @Override
                     public void updateItem(Date date, boolean empty) {
                         super.updateItem(date, empty);
@@ -143,9 +154,12 @@ public class App extends Application {
                         Date expirationDate = bill.getExpirationDate();
                         
                         if (expirationDate == null) {
-                            System.out.println("Expiration date is null.");
+                            this.setStyle("");
+                            System.out.println("got it");
                             return;
                         }
+                        
+                        System.out.println("Expiration Date: " + expirationDate);
                         
                         Date paymentDate = bill.getPaymentDate();
                         
@@ -263,6 +277,12 @@ public class App extends Application {
                                         .getItems()
                                         .get(t.getTablePosition().getRow());
                     Date date = t.getNewValue();
+                    
+                    if (date == null) {
+                        bill.setExpirationDate(null);
+                        return;
+                    }
+                    
                     Calendar cal = Calendar.getInstance();
                     cal.setTime(date);
                     
@@ -392,6 +412,15 @@ public class App extends Application {
         tableColumnReferenceNumber.setPrefWidth(WINDOW_WIDTH / 10);
         tableColumnBillNumber     .setPrefWidth(WINDOW_WIDTH / 10);
         tableColumnComment        .setPrefWidth(WINDOW_WIDTH / 10);
+        
+        tableView.getItems().addListener(new ListChangeListener<Bill>() {
+
+            @Override
+            public void onChanged(ListChangeListener.Change<? extends Bill> c) {
+                fileStateChanged = true;
+                System.out.println("yeah in listener");
+            }
+        });
     }
 
     @Override
@@ -487,5 +516,38 @@ public class App extends Application {
                 throw new IllegalStateException(
                         "Should not get here. Please debug.");
         }
+    }
+    
+    private void saveFile(File file) {
+        try {
+            BillListWriter writer =
+                    new BillListWriter(new FileOutputStream(file));
+            writer.write(tableView.getItems());
+            fileStateChanged = false;
+        } catch (FileNotFoundException ex) {
+            showErrorDialog(
+                    "File access error",
+                    "File \"" + file.getAbsolutePath() + "\" does not exist. " +
+                    "It seems like the file was removed before you pressed " +
+                    "the Save-button.");
+        }
+    }
+    
+    private void saveAs() {
+        // Ask the user about new file name.
+        
+    }
+    
+    private void actionNewDocument() {
+        if (currentFile != null) {
+            
+        }
+    }
+    
+    private void showErrorDialog(String title, String errorMessage) {
+        Alert alert = new Alert(AlertType.ERROR);
+        alert.setTitle(title);
+        alert.setContentText(errorMessage);
+        alert.showAndWait();
     }
 }

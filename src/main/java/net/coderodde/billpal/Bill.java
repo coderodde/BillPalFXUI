@@ -49,9 +49,11 @@ public class Bill {
         setAmount(amount);
         setDateReceived(dateReceived);
         setExpirationDate(expirationDate);
+        
         setPaymentDate(paymentDate);
         setReceiver(receiver);
         setReceiverIban(receiverIban);
+        
         setReferenceNumber(referenceNumber);
         setBillNumber(billNumber);
         setComment(comment);
@@ -150,40 +152,4 @@ public class Bill {
                                   .append("\"]")
                                   .toString();
     }
-//    
-//    public DoubleProperty amountProperty() {
-//        return amount;
-//    }
-//        
-//    public ObjectProperty<Date> dateReceivedProperty() {
-//        return dateReceived;
-//    }
-//    
-//    public ObjectProperty<Date> expirationDateProperty() {
-//        return expirationDate;
-//    }
-//    
-//    public ObjectProperty<Date> paymentDateProperty() {
-//        return paymentDate;
-//    }
-//    
-//    public StringProperty receiverProperty() {
-//        return receiver;
-//    }
-//    
-//    public StringProperty receiverIbanProperty() {
-//        return receiverIban;
-//    }
-//    
-//    public StringProperty referenceNumberProperty() {
-//        return referenceNumber;
-//    }
-//    
-//    public StringProperty billNumberProperty() {
-//        return billNumber;
-//    }
-//    
-//    public StringProperty commentProperty() {
-//        return comment;
-//    }
 }

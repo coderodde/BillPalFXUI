@@ -37,6 +37,7 @@ public class BillListWriter {
         sb.append(bill.getDateReceived().getTime())   .append(COMMA);
         sb.append(bill.getExpirationDate().getTime()) .append(COMMA);
         sb.append(bill.getPaymentDate().getTime())    .append(COMMA);
+        sb.append(bill.getReceiver())                 .append(COMMA);
         sb.append(bill.getReceiverIban())             .append(COMMA);
         sb.append(bill.getReferenceNumber())          .append(COMMA);
         sb.append(bill.getBillNumber())               .append(COMMA);
