@@ -591,20 +591,16 @@ public class App extends Application {
     }
     
     private void actionOpenDocument() {
-        File savedFile = null;
-        
         if (currentFile != null) {
             if (fileStateChanged) {
                 saveFile(currentFile);
             }
-            
-            savedFile = currentFile;
         } else {
             if (fileStateChanged) {
                 boolean doSave = askUserSaveUnsavedFile();
                 
                 if (doSave) {
-                    savedFile = saveAs();
+                    saveAs();
                 }
             }
         }
@@ -613,20 +609,14 @@ public class App extends Application {
         fileChooser.setTitle("Open document");
         File file = fileChooser.showOpenDialog(stage);
         
-        if (file == null) {
-            if (savedFile == null) {
-                return;
-            }
-            
-            currentFile = savedFile;
-            fileStateChanged = false;
-        } else {
+        if (file != null) {
             try {
                 BillListReader reader = 
                         new BillListReader(new FileInputStream(file));
                 List<Bill> billList = reader.read();
                 tableView.getItems().clear();
                 tableView.getItems().addAll(billList);
+                stage.setTitle(file.getName());
             } catch (FileNotFoundException ex) {
                 showErrorDialog(
                         "File access error", 
@@ -651,8 +641,10 @@ public class App extends Application {
     }
     
     private boolean askUserSaveUnsavedFile() {
-        Alert alert = new Alert(AlertType.CONFIRMATION);
-        alert.setContentText("Current file is not saved. Save it now?");
+        Alert alert = new Alert(AlertType.CONFIRMATION, 
+                                "Current file is not saved. Save it now?", 
+                                ButtonType.OK, 
+                                ButtonType.CANCEL);
         return alert.showAndWait().get() == ButtonType.OK;
     }
     
