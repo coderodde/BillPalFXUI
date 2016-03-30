@@ -2,6 +2,7 @@ package net.coderodde.billpal;
 
 import com.sun.javafx.scene.control.skin.TableViewSkinBase;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.util.Calendar;
@@ -14,6 +15,7 @@ import javafx.event.EventHandler;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
+import javafx.scene.control.ButtonType;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
@@ -26,6 +28,7 @@ import javafx.scene.control.TableView;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.control.cell.TextFieldTableCell;
 import javafx.scene.layout.BorderPane;
+import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.util.Callback;
 
@@ -37,7 +40,8 @@ public class App extends Application {
     private static final long MILLISECONDS_PER_WEEK = 7 * MILLISECONDS_PER_DAY;
     
     private final TableView<Bill> tableView = new TableView<>();
-
+    private Stage stage;
+    
     // Table columns:
     private final TableColumn<Bill, Date>   tableColumnExpirationDate;
     private final TableColumn<Bill, Date>   tableColumnPaymentDate;
@@ -413,18 +417,24 @@ public class App extends Application {
         tableColumnBillNumber     .setPrefWidth(WINDOW_WIDTH / 10);
         tableColumnComment        .setPrefWidth(WINDOW_WIDTH / 10);
         
-        tableView.getItems().addListener(new ListChangeListener<Bill>() {
-
-            @Override
-            public void onChanged(ListChangeListener.Change<? extends Bill> c) {
+        tableView.getItems().addListener(
+                (ListChangeListener.Change<? extends Bill> c) -> {
+            if (!fileStateChanged) {
                 fileStateChanged = true;
-                System.out.println("yeah in listener");
+                addFunkyStarOnTitle();
             }
+                
+            System.out.println("yeah in listener");
         });
+    }
+    
+    private void addFunkyStarOnTitle() {
+        stage.setTitle(stage.getTitle() + "*");
     }
 
     @Override
     public void start(Stage stage) {
+        this.stage = stage;
         stage.setTitle("New file");
         stage.setWidth(WINDOW_WIDTH);
         stage.setHeight(WINDOW_HEIGHT);
@@ -455,6 +465,11 @@ public class App extends Application {
     }
 
     private void setMenuActions() {
+        fileMenuNew .setOnAction((e) -> { actionNewDocument();  });
+        fileMenuOpen.setOnAction((e) -> { actionOpenDocument(); });
+        fileMenuSave.setOnAction((e) -> { actionSave(); });
+        fileMenuSaveAs.setOnAction((e) -> { actionSaveAs(); });
+        
         editMenuNewBill.setOnAction((e) -> { 
             tableView.getItems().add(new Bill());
         });
@@ -478,7 +493,7 @@ public class App extends Application {
     
     private String getCellStyle(long millisecondsLeft) {
         if (millisecondsLeft <= 0L) {
-            return "-fx-background-color: red; -fx-text-fill: black;" +
+            return "-fx-background-color: red; -fx-text-fill: black; " +
                    "-fx-font-weight: bold;";
             
         }
@@ -533,15 +548,112 @@ public class App extends Application {
         }
     }
     
-    private void saveAs() {
+    private File saveAs() {
         // Ask the user about new file name.
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle("Save file as...");
+        File file = fileChooser.showSaveDialog(stage);
         
+        if (file == null) {
+            return null;
+        }
+        
+        try {
+            BillListWriter writer =
+                    new BillListWriter(new FileOutputStream(file));
+            writer.write(tableView.getItems());
+            return file;
+        } catch (FileNotFoundException ex) {
+            showErrorDialog("File access error",
+                            "The file \"" + file.getAbsolutePath() + "\" " + 
+                            "cannot be found. It looks like it was removed " +
+                            "before you pressed the Save button.");
+            return null;
+        }
     }
     
     private void actionNewDocument() {
         if (currentFile != null) {
+            if (fileStateChanged) {
+                saveFile(currentFile);
+            }
             
+            currentFile = null;
+        } else {
+            if (fileStateChanged) {
+                saveAs();
+            }
         }
+        
+        tableView.getItems().clear();
+        fileStateChanged = false;
+        stage.setTitle("Unsaved file");
+    }
+    
+    private void actionOpenDocument() {
+        File savedFile = null;
+        
+        if (currentFile != null) {
+            if (fileStateChanged) {
+                saveFile(currentFile);
+            }
+            
+            savedFile = currentFile;
+        } else {
+            if (fileStateChanged) {
+                boolean doSave = askUserSaveUnsavedFile();
+                
+                if (doSave) {
+                    savedFile = saveAs();
+                }
+            }
+        }
+        
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle("Open document");
+        File file = fileChooser.showOpenDialog(stage);
+        
+        if (file == null) {
+            if (savedFile == null) {
+                return;
+            }
+            
+            currentFile = savedFile;
+            fileStateChanged = false;
+        } else {
+            try {
+                BillListReader reader = 
+                        new BillListReader(new FileInputStream(file));
+                List<Bill> billList = reader.read();
+                tableView.getItems().clear();
+                tableView.getItems().addAll(billList);
+            } catch (FileNotFoundException ex) {
+                showErrorDialog(
+                        "File access error", 
+                        "File \"" + file.getAbsolutePath() + "\" seems to be " +
+                        "deleted before the user pressed Open button.");
+            }
+        }
+    }
+    
+    private void actionSave() {
+        if (currentFile != null) {
+            if (fileStateChanged) {
+                saveFile(currentFile);
+            }
+        } else {
+            currentFile = saveAs();
+        }
+    }
+    
+    private void actionSaveAs() {
+        saveAs();
+    }
+    
+    private boolean askUserSaveUnsavedFile() {
+        Alert alert = new Alert(AlertType.CONFIRMATION);
+        alert.setContentText("Current file is not saved. Save it now?");
+        return alert.showAndWait().get() == ButtonType.OK;
     }
     
     private void showErrorDialog(String title, String errorMessage) {
