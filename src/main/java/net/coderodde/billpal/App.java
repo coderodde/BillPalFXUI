@@ -30,6 +30,7 @@ import javafx.scene.control.cell.TextFieldTableCell;
 import javafx.scene.layout.BorderPane;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
+import javafx.stage.WindowEvent;
 import javafx.util.Callback;
 
 public class App extends Application {
@@ -110,6 +111,10 @@ public class App extends Application {
                 new PropertyValueFactory<>("paymentDate")
         );
 
+        tableColumnReceiver.setCellValueFactory(
+                new PropertyValueFactory<>("receiver")
+        );
+        
         tableColumnReceiverIban.setCellValueFactory(
                 new PropertyValueFactory<>("receiverIban")
         );
@@ -138,7 +143,6 @@ public class App extends Application {
 
             @Override
             public TableCell<Bill, Date> call(TableColumn<Bill, Date> column) {
-                System.out.println("shit is here!");
                 return createTableCell(column);
             }
 
@@ -159,11 +163,8 @@ public class App extends Application {
                         
                         if (expirationDate == null) {
                             this.setStyle("");
-                            System.out.println("got it");
                             return;
                         }
-                        
-                        System.out.println("Expiration Date: " + expirationDate);
                         
                         Date paymentDate = bill.getPaymentDate();
                         
@@ -172,11 +173,8 @@ public class App extends Application {
                             long expirationMoment = expirationDate.getTime();
                             long millisecondsLeft = expirationMoment - now;
                             
-                            System.out.println("millis left: " + millisecondsLeft);
-                            
                             String cellStyle = getCellStyle(millisecondsLeft);
                             this.setStyle(cellStyle);
-                            System.out.println("style: " + cellStyle);
                         } else {
                             // paymentDate not null here.
                             Calendar cPayment = Calendar.getInstance();
@@ -423,8 +421,6 @@ public class App extends Application {
                 fileStateChanged = true;
                 addFunkyStarOnTitle();
             }
-                
-            System.out.println("yeah in listener");
         });
     }
     
@@ -435,7 +431,14 @@ public class App extends Application {
     @Override
     public void start(Stage stage) {
         this.stage = stage;
-        stage.setTitle("New file");
+        this.stage.setOnCloseRequest(new EventHandler<WindowEvent>(){
+            @Override
+            public void handle(WindowEvent event) {
+                actionClose();
+            }
+        });
+        
+        stage.setTitle("Unsaved file");
         stage.setWidth(WINDOW_WIDTH);
         stage.setHeight(WINDOW_HEIGHT);
         buildMenu();
@@ -465,13 +468,16 @@ public class App extends Application {
     }
 
     private void setMenuActions() {
-        fileMenuNew .setOnAction((e) -> { actionNewDocument();  });
-        fileMenuOpen.setOnAction((e) -> { actionOpenDocument(); });
-        fileMenuSave.setOnAction((e) -> { actionSave(); });
-        fileMenuSaveAs.setOnAction((e) -> { actionSaveAs(); });
+        fileMenuNew    .setOnAction((e) -> { actionNewDocument();  });
+        fileMenuOpen   .setOnAction((e) -> { actionOpenDocument(); });
+        fileMenuSave   .setOnAction((e) -> { actionSave(); });
+        fileMenuSaveAs .setOnAction((e) -> { actionSaveAs(); });
+        fileMenuClose  .setOnAction((e) -> { actionClose(); });
+        fileMenuAbout  .setOnAction((e) -> { actionAbout(); });
+        fileMenuExit   .setOnAction((e) -> { actionExit(); });
         
         editMenuNewBill.setOnAction((e) -> { 
-            tableView.getItems().add(new Bill());
+            tableView  .getItems().add(new Bill());
         });
 
         tableMenuAddRow.setOnAction((e) -> {
@@ -508,8 +514,6 @@ public class App extends Application {
         int r = 255;
         int g = (int)(255 * f);
         int b = (int)(255 * f);
-        
-        System.out.println("f = " + f);
         
         StringBuilder sb = new StringBuilder("-fx-background-color: #");
         sb.append(Integer.toHexString(r));
@@ -594,13 +598,17 @@ public class App extends Application {
         if (currentFile != null) {
             if (fileStateChanged) {
                 saveFile(currentFile);
+                fileStateChanged = false;
             }
         } else {
             if (fileStateChanged) {
-                boolean doSave = askUserSaveUnsavedFile();
+                boolean doSave = askConfirmation(
+                        "The current file is not saved. " +
+                        "Do you want to save it?");
                 
                 if (doSave) {
                     saveAs();
+                    fileStateChanged = false;
                 }
             }
         }
@@ -616,23 +624,30 @@ public class App extends Application {
                 List<Bill> billList = reader.read();
                 tableView.getItems().clear();
                 tableView.getItems().addAll(billList);
+                fileStateChanged = false;
                 stage.setTitle(file.getName());
+                currentFile = file;
             } catch (FileNotFoundException ex) {
                 showErrorDialog(
                         "File access error", 
                         "File \"" + file.getAbsolutePath() + "\" seems to be " +
                         "deleted before the user pressed Open button.");
             }
-        }
+        } 
     }
     
     private void actionSave() {
         if (currentFile != null) {
             if (fileStateChanged) {
                 saveFile(currentFile);
+                stage.setTitle(currentFile.getName());
             }
         } else {
             currentFile = saveAs();
+            
+            if (currentFile != null) {
+                stage.setTitle(currentFile.getName());
+            }
         }
     }
     
@@ -640,9 +655,58 @@ public class App extends Application {
         saveAs();
     }
     
-    private boolean askUserSaveUnsavedFile() {
+    private void actionClose() {
+        if (currentFile == null) {
+            if (fileStateChanged) {
+                boolean doSave = askConfirmation(
+                    "The current file is not saved. Save it?");
+                
+                if (doSave) {
+                    saveAs();
+                }
+            }
+        } else {
+            boolean doUpdate = askConfirmation(
+                    "The current file has been modified. Save the changes?");
+            
+            if (doUpdate) {
+                saveFile(currentFile);
+            }
+        }
+    }
+    
+    private void actionAbout() {
+        Alert alert = new Alert(AlertType.INFORMATION);
+        alert.setContentText( 
+                "BillPal 1.6\nBy Rodion \"rodde\" Efremov, 2016.03.30");
+        alert.showAndWait();
+    }
+    
+    private void actionExit() {
+        if (fileStateChanged) {
+            if (currentFile != null) {
+                boolean update = askConfirmation(
+                        "The current file is modified. Save the changes?");
+                
+                if (update) {
+                    saveFile(currentFile);
+                }
+            } else {
+                boolean save = askConfirmation(
+                        "The current file is not saved. Save it now?");
+                
+                if (save) {
+                    saveAs();
+                }
+            }
+        }
+        
+        System.exit(0);
+    }
+    
+    private boolean askConfirmation(String question) {
         Alert alert = new Alert(AlertType.CONFIRMATION, 
-                                "Current file is not saved. Save it now?", 
+                                question, 
                                 ButtonType.OK, 
                                 ButtonType.CANCEL);
         return alert.showAndWait().get() == ButtonType.OK;
