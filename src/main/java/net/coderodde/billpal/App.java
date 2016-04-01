@@ -10,6 +10,7 @@ import java.util.Date;
 import java.util.List;
 import javafx.application.Application;
 import static javafx.application.Application.launch;
+import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.event.EventHandler;
 import javafx.scene.Scene;
@@ -42,7 +43,7 @@ public class App extends Application {
     
     private final TableView<Bill> tableView = new TableView<>();
     private Stage stage;
-    
+//    private final Deque<
     // Table columns:
     private final TableColumn<Bill, Date>   tableColumnExpirationDate;
     private final TableColumn<Bill, Date>   tableColumnPaymentDate;
@@ -83,6 +84,13 @@ public class App extends Application {
     private File currentFile;
     
     public App() {
+        this.tableView.sortPolicyProperty().set(t -> {
+            System.out.println("before");
+            FXCollections.sort(tableView.getItems(), t.getComparator());
+            System.out.println("after");
+            return true;
+        });
+        
         this.tableColumnExpirationDate  = new TableColumn<>("Expires");
         this.tableColumnPaymentDate     = new TableColumn<>("Paid");
         this.tableColumnAmount          = new TableColumn<>("Amount");
@@ -673,10 +681,15 @@ public class App extends Application {
                 saveFile(currentFile);
             }
         }
+        
+        tableView.getItems().clear();
+        stage.setTitle("Unsaved file");
     }
     
     private void actionAbout() {
         Alert alert = new Alert(AlertType.INFORMATION);
+        alert.setHeaderText("");
+        alert.setTitle("");
         alert.setContentText( 
                 "BillPal 1.6\nBy Rodion \"rodde\" Efremov, 2016.03.30");
         alert.showAndWait();
