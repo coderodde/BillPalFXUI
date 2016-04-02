@@ -37,7 +37,16 @@ public class EditEvent {
     public void undo() {
         switch (editEventType) {
             case PERMUTE:
+                List<Bill> permutationList = new ArrayList<>(tableItems);
                 
+                for (int index = 0; index < permutation.length; ++index) {
+                    permutationList.set(index, 
+                                        tableItems.get(permutation[index]));
+                }
+                
+                tableItems.clear();
+                tableItems.addAll(permutationList);
+                System.out.println("permute undo");
                 break;
         }
     }
@@ -45,7 +54,16 @@ public class EditEvent {
     public void redo() {
         switch (editEventType) {
             case PERMUTE:
+                List<Bill> permutationList = new ArrayList<>(tableItems);
                 
+                for (int index = 0; index < permutation.length; ++index) {
+                    permutationList.set(permutation[index],
+                                        tableItems.get(index));
+                }
+                
+                tableItems.clear();
+                tableItems.addAll(permutationList);
+                System.out.println("permute redo");
                 break;
         }
     }

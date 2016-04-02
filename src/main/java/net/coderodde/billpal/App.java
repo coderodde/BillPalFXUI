@@ -23,6 +23,7 @@ import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.SelectionMode;
+import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableColumn.CellEditEvent;
@@ -112,6 +113,10 @@ public class App extends Application {
             
             editMenuUndo.setDisable(false);
         }
+        
+        if (canUndo()) {
+            editMenuUndo.setDisable(false);
+        }
     };
     
     public App() {
@@ -174,7 +179,8 @@ public class App extends Application {
             TextFieldTableCell.
                     <Bill, Date>forTableColumn(new DateStringConverter()));
         
-        class FunkyCellFactory implements Callback<TableColumn<Bill, Date>, TableCell<Bill, Date>> {
+        class FunkyCellFactory 
+        implements Callback<TableColumn<Bill, Date>, TableCell<Bill, Date>> {
 
             @Override
             public TableCell<Bill, Date> call(TableColumn<Bill, Date> column) {
@@ -182,8 +188,11 @@ public class App extends Application {
             }
 
 
-            private TextFieldTableCell<Bill, Date> createTableCell(TableColumn<Bill, Date> col) {
-                TextFieldTableCell<Bill, Date> cell = new TextFieldTableCell<Bill, Date>(new DateStringConverter()) {
+            private TextFieldTableCell<Bill, Date> 
+                createTableCell(TableColumn<Bill, Date> col) {
+                TextFieldTableCell<Bill, Date> cell = 
+                        new TextFieldTableCell<Bill, Date>
+                       (new DateStringConverter()) {
                     
                     @Override
                     public void updateItem(Date date, boolean empty) {
@@ -468,11 +477,8 @@ public class App extends Application {
     @Override
     public void start(Stage stage) {
         this.stage = stage;
-        this.stage.setOnCloseRequest(new EventHandler<WindowEvent>(){
-            @Override
-            public void handle(WindowEvent event) {
-                actionClose();
-            }
+        this.stage.setOnCloseRequest((WindowEvent event) -> {
+            actionClose();
         });
         
         stage.setTitle("Unsaved file");
@@ -497,10 +503,16 @@ public class App extends Application {
                                    fileMenuSave,
                                    fileMenuSaveAs,
                                    fileMenuClose,
+                                   new SeparatorMenuItem(),
                                    fileMenuAbout,
                                    fileMenuExit);
 
-        editMenu.getItems().addAll(editMenuNewBill, editMenuRemoveSelected);
+        editMenu.getItems().addAll(editMenuNewBill, 
+                                   editMenuRemoveSelected,
+                                   new SeparatorMenuItem(),
+                                   editMenuUndo,
+                                   editMenuRedo);
+        
         menuBar.getMenus().addAll(fileMenu, editMenu);
     }
 
@@ -524,7 +536,8 @@ public class App extends Application {
             tableView.getSelectionModel().clearSelection();
         });
         
-        
+        editMenuUndo.setOnAction((e) -> { undo(); });
+        editMenuRedo.setOnAction((e) -> { redo(); });
         
         tableMenuAddRow.setOnAction((e) -> {
             tableView.getItems().add(new Bill());
