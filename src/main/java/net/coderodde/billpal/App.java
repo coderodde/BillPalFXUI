@@ -5,12 +5,13 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import javafx.application.Application;
 import static javafx.application.Application.launch;
-import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.event.EventHandler;
 import javafx.scene.Scene;
@@ -33,6 +34,7 @@ import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.stage.WindowEvent;
 import javafx.util.Callback;
+import net.coderodde.billpal.EditEvent.EditEventType;
 
 public class App extends Application {
 
@@ -43,7 +45,7 @@ public class App extends Application {
     
     private final TableView<Bill> tableView = new TableView<>();
     private Stage stage;
-//    private final Deque<
+    
     // Table columns:
     private final TableColumn<Bill, Date>   tableColumnExpirationDate;
     private final TableColumn<Bill, Date>   tableColumnPaymentDate;
@@ -69,6 +71,8 @@ public class App extends Application {
     private final MenuItem editMenuNewBill = new MenuItem("New bill");
     private final MenuItem editMenuRemoveSelected =
               new MenuItem("Remove selected");
+    private final MenuItem editMenuUndo = new MenuItem("Undo");
+    private final MenuItem editMenuRedo = new MenuItem("Redo");
 
     // Table menu:
     private final MenuItem tableMenuAddRow = new MenuItem("Add new row");
@@ -79,17 +83,40 @@ public class App extends Application {
     private final BorderPane rootPane = new BorderPane();
     private final Scene scene = new Scene(rootPane);
 
-    // File state.
+    // File state:
     private boolean fileStateChanged = false;
     private File currentFile;
     
+    // Undo/redo stack stuff:
+    private final List<EditEvent> undoStack = new ArrayList<>();
+    private int activeEvents;
+    
+    private final ListChangeListener<Bill> billListChangeListener = 
+            (ListChangeListener.Change<? extends Bill> c) -> {
+        c.next();
+        
+        if (c.wasPermutated()) {
+            int[] permutation = new int[c.getTo() - c.getFrom()];
+            
+            for (int index = 0, i = c.getFrom(); i < c.getTo(); ++i, ++index) {
+                permutation[index] = c.getPermutation(index);
+            }
+            
+            System.out.println("From: " + c.getFrom());
+            System.out.println("To  : " + c.getTo());
+            System.out.println(Arrays.toString(permutation));
+            
+            pushEditEvent(new EditEvent(EditEventType.PERMUTE, 
+                                        tableView.getItems(),
+                                        permutation));
+            
+            editMenuUndo.setDisable(false);
+        }
+    };
+    
     public App() {
-        this.tableView.sortPolicyProperty().set(t -> {
-            System.out.println("before");
-            FXCollections.sort(tableView.getItems(), t.getComparator());
-            System.out.println("after");
-            return true;
-        });
+        this.editMenuRedo.setDisable(true);
+        this.editMenuUndo.setDisable(true);
         
         this.tableColumnExpirationDate  = new TableColumn<>("Expires");
         this.tableColumnPaymentDate     = new TableColumn<>("Paid");
@@ -430,6 +457,8 @@ public class App extends Application {
                 addFunkyStarOnTitle();
             }
         });
+        
+        tableView.getItems().addListener(billListChangeListener);
     }
     
     private void addFunkyStarOnTitle() {
@@ -478,16 +507,25 @@ public class App extends Application {
     private void setMenuActions() {
         fileMenuNew    .setOnAction((e) -> { actionNewDocument();  });
         fileMenuOpen   .setOnAction((e) -> { actionOpenDocument(); });
-        fileMenuSave   .setOnAction((e) -> { actionSave(); });
-        fileMenuSaveAs .setOnAction((e) -> { actionSaveAs(); });
-        fileMenuClose  .setOnAction((e) -> { actionClose(); });
-        fileMenuAbout  .setOnAction((e) -> { actionAbout(); });
-        fileMenuExit   .setOnAction((e) -> { actionExit(); });
+        fileMenuSave   .setOnAction((e) -> { actionSave();         });
+        fileMenuSaveAs .setOnAction((e) -> { actionSaveAs();       });
+        fileMenuClose  .setOnAction((e) -> { actionClose();        });
+        fileMenuAbout  .setOnAction((e) -> { actionAbout();        });
+        fileMenuExit   .setOnAction((e) -> { actionExit();         });
         
         editMenuNewBill.setOnAction((e) -> { 
             tableView  .getItems().add(new Bill());
         });
 
+        editMenuRemoveSelected.setOnAction((e) -> {
+            List<Bill> selectedBillList = 
+                    tableView.getSelectionModel().getSelectedItems();
+            tableView.getItems().removeAll(selectedBillList);
+            tableView.getSelectionModel().clearSelection();
+        });
+        
+        
+        
         tableMenuAddRow.setOnAction((e) -> {
             tableView.getItems().add(new Bill());
         });
@@ -730,5 +768,63 @@ public class App extends Application {
         alert.setTitle(title);
         alert.setContentText(errorMessage);
         alert.showAndWait();
+    }
+    
+    private boolean canUndo() {
+        return activeEvents > 0;
+    }
+    
+    private boolean canRedo() {
+        return activeEvents < undoStack.size();
+    }
+    
+    private void pushEditEvent(EditEvent editEvent) {
+        while (undoStack.size() > activeEvents) {
+            undoStack.remove(undoStack.size() - 1);
+        }
+        
+        undoStack.add(editEvent);
+        activeEvents++;
+    }
+    
+    private void undo() {
+        if (!canUndo()) {
+            if (undoStack.isEmpty()) {
+                throw new IllegalStateException(
+                        "The edit event stack is empty.");
+            }
+            
+            if (activeEvents == 0) {
+                throw new IllegalStateException(
+                        "The edit stack contains no active events.");
+            }
+        }
+        
+        EditEvent editEvent = undoStack.get(--activeEvents);
+        // Since we record the edit events in the list change listener, we have
+        // to remove it from the list in order to not record the actual undo.
+        tableView.getItems().removeListener(billListChangeListener);
+        editEvent.undo();
+        tableView.getItems().addListener(billListChangeListener);
+        
+        editMenuUndo.setDisable(!canUndo());
+        editMenuRedo.setDisable(!canRedo());
+    }
+    
+    private void redo() {
+        if (!canRedo()) {
+            throw new IllegalStateException(
+                    "Stack has no inactive edit events.");
+        }
+        
+        EditEvent editEvent = undoStack.get(activeEvents++);
+        // Since we record the edit events in the list change listener, we have
+        // to remove it from the list in order to not record the actual redo.
+        tableView.getItems().removeListener(billListChangeListener);
+        editEvent.redo();
+        tableView.getItems().addListener(billListChangeListener);
+        
+        editMenuUndo.setDisable(!canUndo());
+        editMenuRedo.setDisable(!canRedo());
     }
 }
