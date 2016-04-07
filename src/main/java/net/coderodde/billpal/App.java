@@ -6,10 +6,11 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import javafx.application.Application;
 import static javafx.application.Application.launch;
 import javafx.collections.ListChangeListener;
@@ -35,7 +36,10 @@ import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.stage.WindowEvent;
 import javafx.util.Callback;
-import net.coderodde.billpal.EditEvent.EditEventType;
+import net.coderodde.billpal.undo.AbstractEditEvent;
+import net.coderodde.billpal.undo.support.AddNewRowEditEvent;
+import net.coderodde.billpal.undo.support.CellUpdateEditEvent;
+import net.coderodde.billpal.undo.support.PermuteEditEvent;
 
 public class App extends Application {
 
@@ -75,7 +79,7 @@ public class App extends Application {
     private final MenuItem editMenuUndo = new MenuItem("Undo");
     private final MenuItem editMenuRedo = new MenuItem("Redo");
 
-    // Table menu:
+    // Table pop-up menu:
     private final MenuItem tableMenuAddRow = new MenuItem("Add new row");
     private final MenuItem tableMenuRemoveSelected = 
               new MenuItem("Remove selected");
@@ -89,8 +93,9 @@ public class App extends Application {
     private File currentFile;
     
     // Undo/redo stack stuff:
-    private final List<EditEvent> undoStack = new ArrayList<>();
+    private final List<AbstractEditEvent> undoStack = new ArrayList<>();
     private int activeEvents;
+    private final Map<Bill, Integer> billIndexMap = new HashMap<>();
     
     private final ListChangeListener<Bill> billListChangeListener = 
             (ListChangeListener.Change<? extends Bill> c) -> {
@@ -103,20 +108,24 @@ public class App extends Application {
                 permutation[index] = c.getPermutation(index);
             }
             
-            System.out.println("From: " + c.getFrom());
-            System.out.println("To  : " + c.getTo());
-            System.out.println(Arrays.toString(permutation));
-            
-            pushEditEvent(new EditEvent(EditEventType.PERMUTE, 
-                                        tableView.getItems(),
-                                        permutation));
-            
+            pushEditEvent(new PermuteEditEvent(this, false, permutation));
             editMenuUndo.setDisable(false);
-        }
+            
+            for (int index = 0; index < tableView.getItems().size(); ++index) {
+                billIndexMap.put(tableView.getItems().get(index), index);
+            }            
+        } else if (c.wasAdded()) {
+            pushEditEvent(new AddNewRowEditEvent(this, false));
+            
+            int billListSize = tableView.getItems().size();
+            billIndexMap.put(tableView.getItems().get(billListSize - 1), 
+                             billListSize - 1);
+        } else if (c.wasRemoved()) {
+            System.out.println("Removing!");
+        } 
         
-        if (canUndo()) {
-            editMenuUndo.setDisable(false);
-        }
+        editMenuUndo.setDisable(!canUndo());
+        editMenuRedo.setDisable(!canRedo());
     };
     
     public App() {
@@ -293,10 +302,18 @@ public class App extends Application {
 
                     @Override
                     public void handle(CellEditEvent<Bill, Double> t) {
-                        ((Bill) t.getTableView()
-                                 .getItems()
-                                 .get(t.getTablePosition().getRow()))
-                                 .setAmount(t.getNewValue());
+                        Bill target = t.getTableView()
+                                       .getItems()
+                                       .get(t.getTablePosition().getRow());
+                        Bill before = new Bill(target);
+                        target.setAmount(t.getNewValue());
+                        Bill after = new Bill(target);
+                        
+                        pushEditEvent(new CellUpdateEditEvent(App.this, 
+                                                              false, 
+                                                              before, 
+                                                              after, 
+                                                              target));
                     }
                 }
         );
@@ -306,10 +323,18 @@ public class App extends Application {
 
                 @Override
                 public void handle(CellEditEvent<Bill, Date> t) {
-                    ((Bill) t.getTableView()
-                             .getItems()
-                             .get(t.getTablePosition()
-                                   .getRow())).setDateReceived(t.getNewValue());
+                    Bill target = t.getTableView()
+                                   .getItems()
+                                   .get(t.getTablePosition().getRow());
+                    Bill before = new Bill(target);
+                    target.setDateReceived(t.getNewValue());
+                    Bill after = new Bill(target);
+                    
+                    pushEditEvent(new CellUpdateEditEvent(App.this, 
+                                                          false, 
+                                                          before, 
+                                                          after, 
+                                                          target));
                 }
             }
         );
@@ -319,13 +344,21 @@ public class App extends Application {
 
                 @Override
                 public void handle(CellEditEvent<Bill, Date> t) {
-                    Bill bill = (Bill) t.getTableView()
-                                        .getItems()
-                                        .get(t.getTablePosition().getRow());
+                    Bill target = t.getTableView()
+                                   .getItems()
+                                   .get(t.getTablePosition().getRow());
+                    
+                    Bill before = new Bill(target);
                     Date date = t.getNewValue();
                     
                     if (date == null) {
-                        bill.setExpirationDate(null);
+                        target.setExpirationDate(null);
+                        Bill after = new Bill(target);
+                        pushEditEvent(new CellUpdateEditEvent(App.this, 
+                                                              false, 
+                                                              before, 
+                                                              after, 
+                                                              target));
                         return;
                     }
                     
@@ -336,7 +369,13 @@ public class App extends Application {
                     cal.set(Calendar.MINUTE, 0);
                     cal.set(Calendar.SECOND, 0);
                     
-                    bill.setExpirationDate(cal.getTime());
+                    target.setExpirationDate(cal.getTime());
+                    Bill after = new Bill(target);
+                    pushEditEvent(new CellUpdateEditEvent(App.this, 
+                                                          false, 
+                                                          before, 
+                                                          after, 
+                                                          target));
                 }
             }
         );
@@ -346,12 +385,19 @@ public class App extends Application {
 
                 @Override
                 public void handle(CellEditEvent<Bill, Date> t) {
-                    Bill bill = t.getTableView()
-                                 .getItems()
-                                 .get(t.getTablePosition()
-                                 .getRow());
+                    Bill target = t.getTableView()
+                                   .getItems()
+                                   .get(t.getTablePosition().getRow());
                     
-                    bill.setPaymentDate(t.getNewValue());
+                    Bill before = new Bill(target);
+                    target.setPaymentDate(t.getNewValue());
+                    Bill after = new Bill(target);
+                    
+                    pushEditEvent(new CellUpdateEditEvent(App.this,
+                                                          false, 
+                                                          before, 
+                                                          after, 
+                                                          target));
                     
                     // A magic spell needed for updating the background color of 
                     // the expiration date cell whenever the corresponding 
@@ -367,11 +413,19 @@ public class App extends Application {
 
                 @Override
                 public void handle(CellEditEvent<Bill, String> t) {
-                    ((Bill) t.getTableView()
-                             .getItems()
-                             .get(t.getTablePosition()
-                                   .getRow()))
-                             .setReceiver(t.getNewValue());
+                    Bill target = t.getTableView()
+                                   .getItems()
+                                   .get(t.getTablePosition().getRow());
+                    
+                    Bill before = new Bill(target);
+                    target.setReceiver(t.getNewValue());
+                    Bill after = new Bill(target);
+                    
+                    pushEditEvent(new CellUpdateEditEvent(App.this, 
+                                                          false, 
+                                                          before, 
+                                                          after, 
+                                                          target));
                 }
             }
         );
@@ -381,11 +435,19 @@ public class App extends Application {
 
                 @Override
                 public void handle(CellEditEvent<Bill, String> t) {
-                    ((Bill) t.getTableView()
-                             .getItems()
-                             .get(t.getTablePosition()
-                                   .getRow()))
-                             .setReceiverIban(t.getNewValue());
+                    Bill target = t.getTableView()
+                                   .getItems()
+                                   .get(t.getTablePosition().getRow());
+                    
+                    Bill before = new Bill(target);
+                    target.setReceiverIban(t.getNewValue());
+                    Bill after = new Bill(target);
+                    
+                    pushEditEvent(new CellUpdateEditEvent(App.this,
+                                                          false, 
+                                                          before, 
+                                                          after, 
+                                                          target));
                 }
             }
         );
@@ -395,11 +457,19 @@ public class App extends Application {
 
                 @Override
                 public void handle(CellEditEvent<Bill, String> t) {
-                    ((Bill) t.getTableView()
-                             .getItems()
-                             .get(t.getTablePosition()
-                                   .getRow()))
-                             .setReferenceNumber(t.getNewValue());
+                    Bill target = t.getTableView()
+                                   .getItems()
+                                   .get(t.getTablePosition().getRow());
+                    
+                    Bill before = new Bill(target);
+                    target.setReferenceNumber(t.getNewValue());
+                    Bill after = new Bill(target);
+                    
+                    pushEditEvent(new CellUpdateEditEvent(App.this, 
+                                                          false, 
+                                                          before, 
+                                                          after, 
+                                                          target));
                 }
             }
         );
@@ -409,11 +479,19 @@ public class App extends Application {
 
                 @Override
                 public void handle(CellEditEvent<Bill, String> t) {
-                    ((Bill) t.getTableView()
-                             .getItems()
-                             .get(t.getTablePosition()
-                                   .getRow()))
-                             .setBillNumber(t.getNewValue());
+                    Bill target = t.getTableView()
+                                   .getItems()
+                                   .get(t.getTablePosition().getRow());
+                    
+                    Bill before = new Bill(target);
+                    target.setBillNumber(t.getNewValue());
+                    Bill after = new Bill(target);
+                    
+                    pushEditEvent(new CellUpdateEditEvent(App.this,
+                                                          false,
+                                                          before, 
+                                                          after, 
+                                                          target));
                 }
             }
         );
@@ -423,11 +501,19 @@ public class App extends Application {
 
                 @Override
                 public void handle(CellEditEvent<Bill, String> t) {
-                    ((Bill) t.getTableView()
-                             .getItems()
-                             .get(t.getTablePosition()
-                                   .getRow()))
-                             .setComment(t.getNewValue());
+                    Bill target = t.getTableView()
+                                   .getItems()
+                                   .get(t.getTablePosition().getRow());
+                    
+                    Bill before = new Bill(target);
+                    target.setComment(t.getNewValue());
+                    Bill after = new Bill(target);
+                    
+                    pushEditEvent(new CellUpdateEditEvent(App.this, 
+                                                          false, 
+                                                          before, 
+                                                          after, 
+                                                          target));
                 }
             }
         );
@@ -468,6 +554,10 @@ public class App extends Application {
         });
         
         tableView.getItems().addListener(billListChangeListener);
+    }
+    
+    public List<Bill> getItems() {
+        return tableView.getItems();
     }
     
     private void addFunkyStarOnTitle() {
@@ -735,6 +825,8 @@ public class App extends Application {
         
         tableView.getItems().clear();
         stage.setTitle("Unsaved file");
+        undoStack.clear();
+        activeEvents = 0;
     }
     
     private void actionAbout() {
@@ -791,7 +883,7 @@ public class App extends Application {
         return activeEvents < undoStack.size();
     }
     
-    private void pushEditEvent(EditEvent editEvent) {
+    private void pushEditEvent(AbstractEditEvent editEvent) {
         while (undoStack.size() > activeEvents) {
             undoStack.remove(undoStack.size() - 1);
         }
@@ -813,7 +905,7 @@ public class App extends Application {
             }
         }
         
-        EditEvent editEvent = undoStack.get(--activeEvents);
+        AbstractEditEvent editEvent = undoStack.get(--activeEvents);
         // Since we record the edit events in the list change listener, we have
         // to remove it from the list in order to not record the actual undo.
         tableView.getItems().removeListener(billListChangeListener);
@@ -830,7 +922,7 @@ public class App extends Application {
                     "Stack has no inactive edit events.");
         }
         
-        EditEvent editEvent = undoStack.get(activeEvents++);
+        AbstractEditEvent editEvent = undoStack.get(activeEvents++);
         // Since we record the edit events in the list change listener, we have
         // to remove it from the list in order to not record the actual redo.
         tableView.getItems().removeListener(billListChangeListener);

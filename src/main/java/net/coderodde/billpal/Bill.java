@@ -1,6 +1,7 @@
 package net.coderodde.billpal;
 
 import java.util.Date;
+import java.util.Objects;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleDoubleProperty;
@@ -57,6 +58,11 @@ public class Bill {
         setReferenceNumber(referenceNumber);
         setBillNumber(billNumber);
         setComment(comment);
+    }
+    
+    public Bill(Bill copy) {
+        Objects.requireNonNull(copy, "The bill to copy is null.");
+        set(copy);
     }
     
     public Double getAmount() {
@@ -129,6 +135,18 @@ public class Bill {
     
     public void setComment(String comment) {
         this.comment.set(comment);
+    }
+    
+    public void set(Bill bill) {
+        setAmount         (bill.getAmount());
+        setDateReceived   (bill.getDateReceived());
+        setExpirationDate (bill.getExpirationDate());
+        setPaymentDate    (bill.getPaymentDate());
+        setReceiver       (bill.getReceiver());
+        setReceiverIban   (bill.getReceiverIban());
+        setReferenceNumber(bill.getReferenceNumber());
+        setBillNumber     (bill.getBillNumber());
+        setComment        (bill.getComment());
     }
     
     @Override
