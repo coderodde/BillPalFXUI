@@ -309,6 +309,10 @@ public class App extends Application {
                         target.setAmount(t.getNewValue());
                         Bill after = new Bill(target);
                         
+                        before.getAmount();
+                        target.getAmount();
+                        after.getAmount();
+                        
                         pushEditEvent(new CellUpdateEditEvent(App.this, 
                                                               false, 
                                                               before, 
@@ -560,6 +564,10 @@ public class App extends Application {
         return tableView.getItems();
     }
     
+    public TableView<Bill> getTableView() {
+        return tableView;
+    }
+    
     private void addFunkyStarOnTitle() {
         stage.setTitle(stage.getTitle() + "*");
     }
@@ -741,6 +749,8 @@ public class App extends Application {
         tableView.getItems().clear();
         fileStateChanged = false;
         stage.setTitle("Unsaved file");
+        undoStack.clear();
+        activeEvents = 0;
     }
     
     private void actionOpenDocument() {
@@ -783,6 +793,9 @@ public class App extends Application {
                         "deleted before the user pressed Open button.");
             }
         } 
+        
+        undoStack.clear();
+        activeEvents = 0;
     }
     
     private void actionSave() {
@@ -890,6 +903,9 @@ public class App extends Application {
         
         undoStack.add(editEvent);
         activeEvents++;
+        
+        editMenuUndo.setDisable(!canUndo());
+        editMenuRedo.setDisable(!canRedo());
     }
     
     private void undo() {
@@ -923,6 +939,11 @@ public class App extends Application {
         }
         
         AbstractEditEvent editEvent = undoStack.get(activeEvents++);
+        
+        if (editEvent instanceof CellUpdateEditEvent) {
+            System.out.println(editEvent);
+        }
+        
         // Since we record the edit events in the list change listener, we have
         // to remove it from the list in order to not record the actual redo.
         tableView.getItems().removeListener(billListChangeListener);

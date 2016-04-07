@@ -37,22 +37,22 @@ public class CellUpdateEditEvent extends AbstractEditEvent {
     
     @Override
     public void undo() {
+        targetBill.getAmount();
         targetBill.set(before);
+        targetBill.getAmount();
         notifyItemList();
-        System.out.println("undo()");
     }
 
     @Override
     public void redo() {
+        targetBill.getAmount();
         targetBill.set(after);
+        targetBill.getAmount();
         notifyItemList();
-        System.out.println("redo()");
     }
     
     private void notifyItemList() {
-        // TODO: Is there a better way for redrawing the table once a cell gets
-        // edited??
-        app.getItems().add(new Bill());
-        app.getItems().remove(app.getItems().size() - 1);
+        app.getTableView().getColumns().get(0).setVisible(false);
+        app.getTableView().getColumns().get(0).setVisible(true);
     }
 }

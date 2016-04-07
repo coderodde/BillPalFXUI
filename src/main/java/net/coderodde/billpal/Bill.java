@@ -137,6 +137,42 @@ public class Bill {
         this.comment.set(comment);
     }
     
+    public DoubleProperty amountProperty() {
+        return amount;
+    }
+    
+    public ObjectProperty<Date> dateReceivedProperty() {
+        return dateReceived;
+    }
+    
+    public ObjectProperty<Date> expirationDateProperty() {
+        return expirationDate;
+    }
+    
+    public ObjectProperty<Date> paymentDateProperty() {
+        return paymentDate;
+    }
+    
+    public StringProperty receiverProperty() {
+        return receiver;
+    }
+    
+    public StringProperty receiverIbanProperty() {
+        return receiverIban;
+    }
+    
+    public StringProperty referenceNumberProperty() {
+        return referenceNumber;
+    }
+    
+    public StringProperty billNumberProperty() {
+        return billNumber;
+    }
+    
+    public StringProperty commentProperty() {
+        return comment;
+    }
+    
     public void set(Bill bill) {
         setAmount         (bill.getAmount());
         setDateReceived   (bill.getDateReceived());
