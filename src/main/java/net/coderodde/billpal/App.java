@@ -309,10 +309,6 @@ public class App extends Application {
                         target.setAmount(t.getNewValue());
                         Bill after = new Bill(target);
                         
-                        before.getAmount();
-                        target.getAmount();
-                        after.getAmount();
-                        
                         pushEditEvent(new CellUpdateEditEvent(App.this, 
                                                               false, 
                                                               before, 

@@ -13,17 +13,19 @@ import net.coderodde.billpal.undo.AbstractEditEvent;
  */
 public class AddNewRowEditEvent extends AbstractEditEvent {
 
+    private Bill row;
+    
     public AddNewRowEditEvent(App app, boolean eventAfterSave) {
         super(app, eventAfterSave);
     }
     
     @Override
     public void undo() {
-        app.getItems().remove(app.getItems().size() - 1);
+        this.row = app.getItems().remove(app.getItems().size() - 1);
     }
 
     @Override
     public void redo() {
-        app.getItems().add(new Bill());
+        app.getItems().add(row);
     }
 }
