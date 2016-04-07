@@ -37,22 +37,11 @@ public class CellUpdateEditEvent extends AbstractEditEvent {
     
     @Override
     public void undo() {
-        targetBill.getAmount();
         targetBill.set(before);
-        targetBill.getAmount();
-        notifyItemList();
     }
 
     @Override
     public void redo() {
-        targetBill.getAmount();
         targetBill.set(after);
-        targetBill.getAmount();
-        notifyItemList();
-    }
-    
-    private void notifyItemList() {
-        app.getTableView().getColumns().get(0).setVisible(false);
-        app.getTableView().getColumns().get(0).setVisible(true);
     }
 }

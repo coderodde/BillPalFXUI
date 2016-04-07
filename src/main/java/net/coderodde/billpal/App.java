@@ -9,8 +9,11 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
 import javafx.application.Application;
 import static javafx.application.Application.launch;
 import javafx.collections.ListChangeListener;
@@ -40,6 +43,7 @@ import net.coderodde.billpal.undo.AbstractEditEvent;
 import net.coderodde.billpal.undo.support.AddNewRowEditEvent;
 import net.coderodde.billpal.undo.support.CellUpdateEditEvent;
 import net.coderodde.billpal.undo.support.PermuteEditEvent;
+import net.coderodde.billpal.undo.support.RowRemovalEditEvent;
 
 public class App extends Application {
 
@@ -110,6 +114,7 @@ public class App extends Application {
             
             pushEditEvent(new PermuteEditEvent(this, false, permutation));
             editMenuUndo.setDisable(false);
+            billIndexMap.clear();
             
             for (int index = 0; index < tableView.getItems().size(); ++index) {
                 billIndexMap.put(tableView.getItems().get(index), index);
@@ -121,7 +126,23 @@ public class App extends Application {
             billIndexMap.put(tableView.getItems().get(billListSize - 1), 
                              billListSize - 1);
         } else if (c.wasRemoved()) {
-            System.out.println("Removing!");
+            System.out.println("Items size: " + tableView.getItems().size());
+            Set<Bill> removeSet = new HashSet<>(c.getRemoved());
+            
+            while (c.next()) {
+                removeSet.addAll(c.getRemoved());
+            }
+            
+            TreeMap<Integer, Bill> map = new TreeMap<>();
+            
+            for (Bill removedBill : removeSet) {
+                map.put(billIndexMap.get(removedBill), removedBill);
+            }
+            
+            pushEditEvent(new RowRemovalEditEvent(this, false, map));
+            
+            // Recompute the index map.
+            rebuildBillListIndexMap();
         } 
         
         editMenuUndo.setDisable(!canUndo());
@@ -562,6 +583,16 @@ public class App extends Application {
     
     public TableView<Bill> getTableView() {
         return tableView;
+    }
+    
+    public void rebuildBillListIndexMap() {
+        billIndexMap.clear();
+        
+        int index = 0;
+        
+        for (Bill bill : tableView.getItems()) {
+            billIndexMap.put(bill, index++);
+        }
     }
     
     private void addFunkyStarOnTitle() {
