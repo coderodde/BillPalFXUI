@@ -1,5 +1,7 @@
 package net.coderodde.billpal;
 
+import net.coderodde.billpal.fileio.BillListWriter;
+import net.coderodde.billpal.fileio.BillListReader;
 import com.sun.javafx.scene.control.skin.TableViewSkinBase;
 import java.io.File;
 import java.io.FileInputStream;
@@ -28,7 +30,6 @@ import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.SelectionMode;
 import javafx.scene.control.SeparatorMenuItem;
-import javafx.scene.control.TableCell;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableColumn.CellEditEvent;
 import javafx.scene.control.TableView;
@@ -38,7 +39,6 @@ import javafx.scene.layout.BorderPane;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.stage.WindowEvent;
-import javafx.util.Callback;
 import net.coderodde.billpal.undo.AbstractEditEvent;
 import net.coderodde.billpal.undo.support.AddNewRowEditEvent;
 import net.coderodde.billpal.undo.support.CellUpdateEditEvent;
@@ -49,8 +49,6 @@ public class App extends Application {
 
     private static final int WINDOW_WIDTH  = 800;
     private static final int WINDOW_HEIGHT = 600;
-    private static final long MILLISECONDS_PER_DAY = 24 * 60 * 60 * 1000;
-    private static final long MILLISECONDS_PER_WEEK = 7 * MILLISECONDS_PER_DAY;
     
     private final TableView<Bill> tableView = new TableView<>();
     private Stage stage;
@@ -101,53 +99,8 @@ public class App extends Application {
     private int activeEvents;
     private final Map<Bill, Integer> billIndexMap = new HashMap<>();
     
-    private final ListChangeListener<Bill> billListChangeListener = 
-            (ListChangeListener.Change<? extends Bill> c) -> {
-        c.next();
-        
-        if (c.wasPermutated()) {
-            int[] permutation = new int[c.getTo() - c.getFrom()];
-            
-            for (int index = 0, i = c.getFrom(); i < c.getTo(); ++i, ++index) {
-                permutation[index] = c.getPermutation(index);
-            }
-            
-            pushEditEvent(new PermuteEditEvent(this, false, permutation));
-            editMenuUndo.setDisable(false);
-            billIndexMap.clear();
-            
-            for (int index = 0; index < tableView.getItems().size(); ++index) {
-                billIndexMap.put(tableView.getItems().get(index), index);
-            }            
-        } else if (c.wasAdded()) {
-            pushEditEvent(new AddNewRowEditEvent(this, false));
-            
-            int billListSize = tableView.getItems().size();
-            billIndexMap.put(tableView.getItems().get(billListSize - 1), 
-                             billListSize - 1);
-        } else if (c.wasRemoved()) {
-            System.out.println("Items size: " + tableView.getItems().size());
-            Set<Bill> removeSet = new HashSet<>(c.getRemoved());
-            
-            while (c.next()) {
-                removeSet.addAll(c.getRemoved());
-            }
-            
-            TreeMap<Integer, Bill> map = new TreeMap<>();
-            
-            for (Bill removedBill : removeSet) {
-                map.put(billIndexMap.get(removedBill), removedBill);
-            }
-            
-            pushEditEvent(new RowRemovalEditEvent(this, false, map));
-            
-            // Recompute the index map.
-            rebuildBillListIndexMap();
-        } 
-        
-        editMenuUndo.setDisable(!canUndo());
-        editMenuRedo.setDisable(!canRedo());
-    };
+    private final ListChangeListener<Bill> listChangeListener = 
+            new BillListChangeListener(this);
     
     public App() {
         this.editMenuRedo.setDisable(true);
@@ -209,95 +162,8 @@ public class App extends Application {
             TextFieldTableCell.
                     <Bill, Date>forTableColumn(new DateStringConverter()));
         
-        class FunkyCellFactory 
-        implements Callback<TableColumn<Bill, Date>, TableCell<Bill, Date>> {
-
-            @Override
-            public TableCell<Bill, Date> call(TableColumn<Bill, Date> column) {
-                return createTableCell(column);
-            }
-
-
-            private TextFieldTableCell<Bill, Date> 
-                createTableCell(TableColumn<Bill, Date> col) {
-                TextFieldTableCell<Bill, Date> cell = 
-                        new TextFieldTableCell<Bill, Date>
-                       (new DateStringConverter()) {
-                    
-                    @Override
-                    public void updateItem(Date date, boolean empty) {
-                        super.updateItem(date, empty);
-                        Bill bill = (Bill) this.getTableRow().getItem();
-                        
-                        if (bill == null) {
-                            return;
-                        }
-                        
-                        Date expirationDate = bill.getExpirationDate();
-                        
-                        if (expirationDate == null) {
-                            this.setStyle("");
-                            return;
-                        }
-                        
-                        Date paymentDate = bill.getPaymentDate();
-                        
-                        if (paymentDate == null) {
-                            long now = new Date().getTime();
-                            long expirationMoment = expirationDate.getTime();
-                            long millisecondsLeft = expirationMoment - now;
-                            
-                            String cellStyle = getCellStyle(millisecondsLeft);
-                            this.setStyle(cellStyle);
-                        } else {
-                            // paymentDate not null here.
-                            Calendar cPayment = Calendar.getInstance();
-                            Calendar cExpiration = Calendar.getInstance();
-                            cPayment.setTime(paymentDate);
-                            cExpiration.setTime(expirationDate);
-                            
-                            int paymentYear = cPayment.get(Calendar.YEAR);
-                            int expirationYear = cExpiration.get(Calendar.YEAR);
-                            
-                            if (paymentYear > expirationYear) {
-                                this.setStyle("-fx-background-color: #2db6e3;");
-                                return;
-                            } else if (paymentYear < expirationYear) {
-                                this.setStyle("-fx-background-color: #0be633");
-                                return;
-                            }
-                            
-                            int paymentMonth = cPayment.get(Calendar.MONTH);
-                            int expirationMonth = 
-                                    cExpiration.get(Calendar.MONTH);
-                            
-                            if (paymentMonth > expirationMonth) {
-                                this.setStyle("-fx-background-color: #2db6e3;");
-                                return;
-                            } else if (paymentMonth < expirationMonth) {
-                                this.setStyle("-fx-background-color: #0be633");
-                                return;
-                            }
-                            
-                            int paymentDay = 
-                                    cPayment.get(Calendar.DAY_OF_MONTH);
-                            int expirationDay = 
-                                    cExpiration.get(Calendar.DAY_OF_MONTH);
-                            
-                            if (paymentDay > expirationDay) {
-                                this.setStyle("-fx-background-color: #2db6e3;");
-                            } else {
-                                this.setStyle("-fx-background-color: #0be633");
-                            }
-                        }
-                    }
-                };
-                
-                return cell;
-            }
-        }
-        
-        tableColumnExpirationDate.setCellFactory(new FunkyCellFactory());
+        tableColumnExpirationDate.setCellFactory(
+                new ExpirationDateCellFactory());
 
         tableColumnPaymentDate.setCellFactory(
             TextFieldTableCell.
@@ -574,7 +440,7 @@ public class App extends Application {
             }
         });
         
-        tableView.getItems().addListener(billListChangeListener);
+        tableView.getItems().addListener(listChangeListener);
     }
     
     public List<Bill> getItems() {
@@ -679,46 +545,6 @@ public class App extends Application {
     private void buildTablePopupMenu() {
         tableView.setContextMenu(new ContextMenu(tableMenuAddRow,
                                                  tableMenuRemoveSelected));
-    }
-    
-    private String getCellStyle(long millisecondsLeft) {
-        if (millisecondsLeft <= 0L) {
-            return "-fx-background-color: red; -fx-text-fill: black; " +
-                   "-fx-font-weight: bold;";
-            
-        }
-        
-        float f = (1.0f * millisecondsLeft) / (MILLISECONDS_PER_WEEK);
-        
-        if (f >= 1.0f) {
-            // "" means clear the table cell style, thus using default colors.
-            return "";
-        }
-        
-        int r = 255;
-        int g = (int)(255 * f);
-        int b = (int)(255 * f);
-        
-        StringBuilder sb = new StringBuilder("-fx-background-color: #");
-        sb.append(Integer.toHexString(r));
-        sb.append(handleLeadingZero(Integer.toHexString(g)));
-        sb.append(handleLeadingZero(Integer.toHexString(b)));
-        sb.append("; -fx-text-fill: black; -fx-font-weight: bold;");
-        return sb.toString(); 
-    }
-    
-    private String handleLeadingZero(String s) {
-        switch (s.length()) {
-            case 1:
-                return "0" + s;
-                
-            case 2:
-                return s;
-                
-            default:
-                throw new IllegalStateException(
-                        "Should not get here. Please debug.");
-        }
     }
     
     private void saveFile(File file) {
@@ -915,15 +741,27 @@ public class App extends Application {
         alert.showAndWait();
     }
     
-    private boolean canUndo() {
+    boolean canUndo() {
         return activeEvents > 0;
     }
     
-    private boolean canRedo() {
+    boolean canRedo() {
         return activeEvents < undoStack.size();
     }
     
-    private void pushEditEvent(AbstractEditEvent editEvent) {
+    Map<Bill, Integer> getBillIndexMap() {
+        return billIndexMap;
+    }
+    
+    void setUndoEditMenuDisabled(boolean disabled) {
+        editMenuUndo.setDisable(disabled);
+    }
+    
+    void setRedoEditMenuDisabled(boolean disabled) {
+        editMenuRedo.setDisable(disabled);
+    }
+    
+    void pushEditEvent(AbstractEditEvent editEvent) {
         while (undoStack.size() > activeEvents) {
             undoStack.remove(undoStack.size() - 1);
         }
@@ -951,9 +789,9 @@ public class App extends Application {
         AbstractEditEvent editEvent = undoStack.get(--activeEvents);
         // Since we record the edit events in the list change listener, we have
         // to remove it from the list in order to not record the actual undo.
-        tableView.getItems().removeListener(billListChangeListener);
+        tableView.getItems().removeListener(listChangeListener);
         editEvent.undo();
-        tableView.getItems().addListener(billListChangeListener);
+        tableView.getItems().addListener(listChangeListener);
         
         editMenuUndo.setDisable(!canUndo());
         editMenuRedo.setDisable(!canRedo());
@@ -973,9 +811,9 @@ public class App extends Application {
         
         // Since we record the edit events in the list change listener, we have
         // to remove it from the list in order to not record the actual redo.
-        tableView.getItems().removeListener(billListChangeListener);
+        tableView.getItems().removeListener(listChangeListener);
         editEvent.redo();
-        tableView.getItems().addListener(billListChangeListener);
+        tableView.getItems().addListener(listChangeListener);
         
         editMenuUndo.setDisable(!canUndo());
         editMenuRedo.setDisable(!canRedo());

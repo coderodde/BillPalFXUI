@@ -1,4 +1,4 @@
-package net.coderodde.billpal;
+package net.coderodde.billpal.fileio;
 
 import java.io.InputStream;
 import java.util.ArrayList;
@@ -6,6 +6,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Objects;
 import java.util.Scanner;
+import net.coderodde.billpal.Bill;
 
 /**
  * This class is responsible for reading the list of bills from 
