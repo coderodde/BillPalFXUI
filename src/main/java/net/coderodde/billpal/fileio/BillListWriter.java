@@ -1,10 +1,11 @@
-package net.coderodde.billpal;
+package net.coderodde.billpal.fileio;
 
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.util.Date;
 import java.util.List;
 import java.util.Objects;
+import net.coderodde.billpal.Bill;
 
 /**
  * This class is responsible for writing the list of bills into a text file.

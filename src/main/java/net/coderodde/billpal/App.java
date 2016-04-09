@@ -11,11 +11,8 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.TreeMap;
 import javafx.application.Application;
 import static javafx.application.Application.launch;
 import javafx.collections.ListChangeListener;
@@ -40,10 +37,7 @@ import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.stage.WindowEvent;
 import net.coderodde.billpal.undo.AbstractEditEvent;
-import net.coderodde.billpal.undo.support.AddNewRowEditEvent;
 import net.coderodde.billpal.undo.support.CellUpdateEditEvent;
-import net.coderodde.billpal.undo.support.PermuteEditEvent;
-import net.coderodde.billpal.undo.support.RowRemovalEditEvent;
 
 public class App extends Application {
 
@@ -436,7 +430,7 @@ public class App extends Application {
                 (ListChangeListener.Change<? extends Bill> c) -> {
             if (!fileStateChanged) {
                 fileStateChanged = true;
-                addFunkyStarOnTitle();
+                setFileSavedStatus(false);
             }
         });
         
@@ -461,10 +455,6 @@ public class App extends Application {
         }
     }
     
-    private void addFunkyStarOnTitle() {
-        stage.setTitle(stage.getTitle() + "*");
-    }
-
     @Override
     public void start(Stage stage) {
         this.stage = stage;
@@ -472,7 +462,7 @@ public class App extends Application {
             actionClose();
         });
         
-        stage.setTitle("Unsaved file");
+        stage.setTitle("Unsaved file*");
         stage.setWidth(WINDOW_WIDTH);
         stage.setHeight(WINDOW_HEIGHT);
         buildMenu();
@@ -481,6 +471,7 @@ public class App extends Application {
         stage.setScene(scene);
         tableView.setEditable(true);
         tableView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+        setFileSavedStatus(false);
         stage.show();
     }
 
@@ -552,7 +543,7 @@ public class App extends Application {
             BillListWriter writer =
                     new BillListWriter(new FileOutputStream(file));
             writer.write(tableView.getItems());
-            fileStateChanged = false;
+            setFileSavedStatus(fileStateChanged = false);
         } catch (FileNotFoundException ex) {
             showErrorDialog(
                     "File access error",
@@ -587,30 +578,77 @@ public class App extends Application {
     }
     
     private void actionNewDocument() {
-        if (currentFile != null) {
-            if (fileStateChanged) {
-                saveFile(currentFile);
+        if (!fileStateChanged) {
+            currentFile = null;
+            setFileSavedStatus(false);
+            undoStack.clear();
+            activeEvents = 0;
+            
+            if (tableView.getItems().size() > 0) {
+                System.out.println("tableView.getItems().size() > 0");
             }
             
-            currentFile = null;
-        } else {
-            if (fileStateChanged) {
-                saveAs();
+            tableView.getItems().clear();
+            return;
+        }
+        
+        // Once here, the current document was modified.
+        if (currentFile == null) {
+            while (true) {
+                boolean yes = askConfirmation(
+                    "The current document is not saved. Save it?");
+                
+                if (!yes) {
+                    setFileSavedStatus(false);
+                    undoStack.clear();
+                    activeEvents = 0;
+                    
+                    if (tableView.getItems().size() > 0) {
+                        System.out.println("tableView.getItems().size() > 0");
+                    }
+
+                    tableView.getItems().clear();
+                    return;
+                }
+                
+                File file = saveAs();
+                
+                if (file == null) {
+                    return;
+                }
+                
+                tableView.getItems().clear();
+                setFileSavedStatus(true);
+                undoStack.clear();
+                activeEvents = 0;
+                return;
             }
         }
         
-        tableView.getItems().clear();
-        fileStateChanged = false;
-        stage.setTitle("Unsaved file");
+        // Once here, the current document was saved previously, i.e., it exists
+        // in the file system.
+        boolean yes = askConfirmation(
+                "The current file has been modified. Save the changes?");
+        
+        if (yes) {
+            saveFile(currentFile);
+        }
+        
+        setFileSavedStatus(false);
         undoStack.clear();
         activeEvents = 0;
+        currentFile = null;
     }
     
     private void actionOpenDocument() {
         if (currentFile != null) {
             if (fileStateChanged) {
-                saveFile(currentFile);
-                fileStateChanged = false;
+                boolean yes = askConfirmation(
+                        "The current file is modified. Save it?");
+                
+                if (yes) {
+                    saveFile(currentFile);
+                }
             }
         } else {
             if (fileStateChanged) {
@@ -620,10 +658,11 @@ public class App extends Application {
                 
                 if (doSave) {
                     saveAs();
-                    fileStateChanged = false;
                 }
             }
         }
+        
+        setFileSavedStatus(fileStateChanged = false);
         
         FileChooser fileChooser = new FileChooser();
         fileChooser.setTitle("Open document");
@@ -636,7 +675,7 @@ public class App extends Application {
                 List<Bill> billList = reader.read();
                 tableView.getItems().clear();
                 tableView.getItems().addAll(billList);
-                fileStateChanged = false;
+                setFileSavedStatus(fileStateChanged = false);
                 stage.setTitle(file.getName());
                 currentFile = file;
             } catch (FileNotFoundException ex) {
@@ -690,7 +729,7 @@ public class App extends Application {
         }
         
         tableView.getItems().clear();
-        stage.setTitle("Unsaved file");
+        stage.setTitle("Unsaved file*");
         undoStack.clear();
         activeEvents = 0;
     }
@@ -818,4 +857,17 @@ public class App extends Application {
         editMenuUndo.setDisable(!canUndo());
         editMenuRedo.setDisable(!canRedo());
     }
+    
+    private void setFileSavedStatus(boolean saved) {
+        StringBuilder sb = new StringBuilder();
+        sb.append(currentFile == null ? "Unsaved file" : currentFile.getName());
+        
+        if (!saved) {
+            sb.append(" - Edited");
+        }
+        
+        stage.setTitle(sb.toString());
+    }
+    
+    
 }

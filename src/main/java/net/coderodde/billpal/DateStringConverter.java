@@ -35,6 +35,10 @@ public class DateStringConverter extends StringConverter<Date> {
 
     @Override
     public Date fromString(String string) {
+        if (string == null || string.trim().isEmpty()) {
+            return null;
+        }
+        
         try {
             return DATE_FORMAT.parse(string);
         } catch (ParseException ex) {
