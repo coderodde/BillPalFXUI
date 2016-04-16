@@ -12,15 +12,31 @@ import net.coderodde.billpal.App;
 public abstract class AbstractEditEvent {
    
     protected final App app;
-    protected final boolean eventAfterSave;
+    protected boolean eventBeforeSave;
+    protected boolean eventAfterSave;
     
-    public AbstractEditEvent(App app, boolean eventAfterSave) {
+    public AbstractEditEvent(App app) {
         this.app = Objects.requireNonNull(app, 
                                           "The Application instance is null.");
-        this.eventAfterSave = eventAfterSave;
     }
     
     public abstract void undo();
     
     public abstract void redo();
+    
+    public void setEventBeforeSave(boolean eventBeforeSave) {
+        this.eventBeforeSave = eventBeforeSave;
+    }
+    
+    public void setEventAfterSave(boolean eventAfterSave) {
+        this.eventAfterSave = eventAfterSave;
+    }
+    
+    public boolean eventIsBeforeSave() {
+        return eventBeforeSave;
+    }
+    
+    public boolean eventIsAfterSave() {
+        return eventAfterSave;
+    }
 }

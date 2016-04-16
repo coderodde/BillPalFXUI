@@ -46,7 +46,7 @@ class BillListChangeListener implements ListChangeListener<Bill> {
                 billIndexMap.put(billList.get(index), index);
             }
         } else if (c.wasAdded()) {
-            app.pushEditEvent(new AddNewRowEditEvent(app, false));
+            app.pushEditEvent(new AddNewRowEditEvent(app));
 
             int billListSize = app.getItems().size();
             app.getBillIndexMap().put(app.getItems().get(billListSize - 1),

@@ -192,7 +192,6 @@ public class App extends Application {
                         Bill after = new Bill(target);
                         
                         pushEditEvent(new CellUpdateEditEvent(App.this, 
-                                                              false, 
                                                               before, 
                                                               after, 
                                                               target));
@@ -212,8 +211,7 @@ public class App extends Application {
                     target.setDateReceived(t.getNewValue());
                     Bill after = new Bill(target);
                     
-                    pushEditEvent(new CellUpdateEditEvent(App.this, 
-                                                          false, 
+                    pushEditEvent(new CellUpdateEditEvent(App.this,
                                                           before, 
                                                           after, 
                                                           target));
@@ -237,7 +235,6 @@ public class App extends Application {
                         target.setExpirationDate(null);
                         Bill after = new Bill(target);
                         pushEditEvent(new CellUpdateEditEvent(App.this, 
-                                                              false, 
                                                               before, 
                                                               after, 
                                                               target));
@@ -254,7 +251,6 @@ public class App extends Application {
                     target.setExpirationDate(cal.getTime());
                     Bill after = new Bill(target);
                     pushEditEvent(new CellUpdateEditEvent(App.this, 
-                                                          false, 
                                                           before, 
                                                           after, 
                                                           target));
@@ -276,7 +272,6 @@ public class App extends Application {
                     Bill after = new Bill(target);
                     
                     pushEditEvent(new CellUpdateEditEvent(App.this,
-                                                          false, 
                                                           before, 
                                                           after, 
                                                           target));
@@ -304,7 +299,6 @@ public class App extends Application {
                     Bill after = new Bill(target);
                     
                     pushEditEvent(new CellUpdateEditEvent(App.this, 
-                                                          false, 
                                                           before, 
                                                           after, 
                                                           target));
@@ -326,7 +320,6 @@ public class App extends Application {
                     Bill after = new Bill(target);
                     
                     pushEditEvent(new CellUpdateEditEvent(App.this,
-                                                          false, 
                                                           before, 
                                                           after, 
                                                           target));
@@ -348,7 +341,6 @@ public class App extends Application {
                     Bill after = new Bill(target);
                     
                     pushEditEvent(new CellUpdateEditEvent(App.this, 
-                                                          false, 
                                                           before, 
                                                           after, 
                                                           target));
@@ -370,7 +362,6 @@ public class App extends Application {
                     Bill after = new Bill(target);
                     
                     pushEditEvent(new CellUpdateEditEvent(App.this,
-                                                          false,
                                                           before, 
                                                           after, 
                                                           target));
@@ -392,7 +383,6 @@ public class App extends Application {
                     Bill after = new Bill(target);
                     
                     pushEditEvent(new CellUpdateEditEvent(App.this, 
-                                                          false, 
                                                           before, 
                                                           after, 
                                                           target));
