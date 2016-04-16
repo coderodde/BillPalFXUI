@@ -43,6 +43,7 @@ public class App extends Application {
 
     private static final int WINDOW_WIDTH  = 800;
     private static final int WINDOW_HEIGHT = 600;
+    private static final String UNSAVED_FILE_TITLE = "Unsaved file";
     
     private final TableView<Bill> tableView = new TableView<>();
     private Stage stage;
@@ -462,7 +463,6 @@ public class App extends Application {
             actionClose();
         });
         
-        stage.setTitle("Unsaved file*");
         stage.setWidth(WINDOW_WIDTH);
         stage.setHeight(WINDOW_HEIGHT);
         buildMenu();
@@ -471,7 +471,7 @@ public class App extends Application {
         stage.setScene(scene);
         tableView.setEditable(true);
         tableView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
-        setFileSavedStatus(false);
+        setFileSavedStatus(true);
         stage.show();
     }
 
@@ -503,7 +503,7 @@ public class App extends Application {
         fileMenuOpen   .setOnAction((e) -> { actionOpenDocument(); });
         fileMenuSave   .setOnAction((e) -> { actionSave();         });
         fileMenuSaveAs .setOnAction((e) -> { actionSaveAs();       });
-        fileMenuClose  .setOnAction((e) -> { actionClose();        });
+//        fileMenuClose  .setOnAction((e) -> { actionClose();        });
         fileMenuAbout  .setOnAction((e) -> { actionAbout();        });
         fileMenuExit   .setOnAction((e) -> { actionExit();         });
         
@@ -580,61 +580,71 @@ public class App extends Application {
     private void actionNewDocument() {
         if (!fileStateChanged) {
             currentFile = null;
-            setFileSavedStatus(false);
+            setFileSavedStatus(true);
             undoStack.clear();
             activeEvents = 0;
-            
-            if (tableView.getItems().size() > 0) {
-                System.out.println("tableView.getItems().size() > 0");
-            }
-            
             tableView.getItems().clear();
             return;
         }
         
         // Once here, the current document was modified.
+        
         if (currentFile == null) {
-            while (true) {
-                boolean yes = askConfirmation(
-                    "The current document is not saved. Save it?");
-                
-                if (!yes) {
-                    setFileSavedStatus(false);
-                    undoStack.clear();
-                    activeEvents = 0;
-                    
-                    if (tableView.getItems().size() > 0) {
-                        System.out.println("tableView.getItems().size() > 0");
-                    }
+            ButtonType buttonType = 
+                    askYesNoCancel(
+                            "The current document is not saved. Save it?");
 
-                    tableView.getItems().clear();
-                    return;
-                }
-                
+            if (buttonType == ButtonType.YES) {
+                System.out.println("Yes");
                 File file = saveAs();
                 
                 if (file == null) {
+                    // Once here, the user pressed Cancel button in the Save
+                    // dialog. Abort saving + creating new document and give 
+                    // the user opportunity to decide.
                     return;
                 }
                 
-                tableView.getItems().clear();
-                setFileSavedStatus(true);
                 undoStack.clear();
                 activeEvents = 0;
-                return;
+                tableView.getItems().clear();
+                setFileSavedStatus(true);
+            } else if (buttonType == ButtonType.NO) {
+                System.out.println("No");
+                undoStack.clear();
+                activeEvents = 0;
+                tableView.getItems().clear();
+                setFileSavedStatus(true);
+            } else if (buttonType == ButtonType.CANCEL) {
+                
+            } else {
+                throw new IllegalStateException(
+                        "Unrecognized button type: " + buttonType);
             }
+            
+            return;
         }
         
         // Once here, the current document was saved previously, i.e., it exists
         // in the file system.
-        boolean yes = askConfirmation(
+        ButtonType buttonType = 
+                askYesNoCancel(
                 "The current file has been modified. Save the changes?");
         
-        if (yes) {
+        if (buttonType == ButtonType.CANCEL) {
+            return;
+        } 
+        
+        if (buttonType == ButtonType.YES) {
             saveFile(currentFile);
+        } else if (buttonType == ButtonType.NO) {
+            
+        } else {
+            throw new IllegalStateException(
+                    "Unrecognized button type: " + buttonType);
         }
         
-        setFileSavedStatus(false);
+        setFileSavedStatus(true);
         undoStack.clear();
         activeEvents = 0;
         currentFile = null;
@@ -643,48 +653,82 @@ public class App extends Application {
     private void actionOpenDocument() {
         if (currentFile != null) {
             if (fileStateChanged) {
-                boolean yes = askConfirmation(
-                        "The current file is modified. Save it?");
+                ButtonType buttonType = 
+                        askYesNoCancel("The current file is modified. " + 
+                                       "Save the changes?");
                 
-                if (yes) {
+                boolean doActualFileOpening = true;
+                
+                if (buttonType == ButtonType.YES) {
                     saveFile(currentFile);
+                } else if (buttonType == ButtonType.NO) {
+                    
+                } else if (buttonType == ButtonType.CANCEL) {
+                    doActualFileOpening = false;
+                } else {
+                    throw new IllegalStateException(
+                            "Unrecognized button type: " + buttonType);
+                }
+                
+                if (!doActualFileOpening) {
+                    return;
                 }
             }
         } else {
             if (fileStateChanged) {
-                boolean doSave = askConfirmation(
-                        "The current file is not saved. " +
-                        "Do you want to save it?");
+                ButtonType buttonType = 
+                        askYesNoCancel("The current file is not saved. " + 
+                                       "Save it?");
                 
-                if (doSave) {
-                    saveAs();
+                boolean doActualFileOpening = true;
+                
+                if (buttonType == ButtonType.YES) {
+                    File file = saveAs();
+                    
+                    if (file == null) {
+                        // If here, the user pressed the cancel button in the
+                        // file choice dialog. Give him/her another chance for
+                        // deciding what to do with the current file.
+                        return;
+                    }
+                } else if (buttonType == ButtonType.NO) {
+                    
+                } else if (buttonType == ButtonType.CANCEL) {
+                    doActualFileOpening = false;
+                } else {
+                    throw new IllegalArgumentException(
+                            "Unrecognized buttont type: " + buttonType);
+                }
+                
+                if (!doActualFileOpening) {
+                    return;
                 }
             }
         }
-        
-        setFileSavedStatus(fileStateChanged = false);
         
         FileChooser fileChooser = new FileChooser();
         fileChooser.setTitle("Open document");
         File file = fileChooser.showOpenDialog(stage);
         
-        if (file != null) {
-            try {
-                BillListReader reader = 
-                        new BillListReader(new FileInputStream(file));
-                List<Bill> billList = reader.read();
-                tableView.getItems().clear();
-                tableView.getItems().addAll(billList);
-                setFileSavedStatus(fileStateChanged = false);
-                stage.setTitle(file.getName());
-                currentFile = file;
-            } catch (FileNotFoundException ex) {
-                showErrorDialog(
-                        "File access error", 
-                        "File \"" + file.getAbsolutePath() + "\" seems to be " +
-                        "deleted before the user pressed Open button.");
-            }
-        } 
+        if (file == null) {
+            return;
+        }
+        
+        try {
+            BillListReader reader = 
+                    new BillListReader(new FileInputStream(file));
+            List<Bill> billList = reader.read();
+            tableView.getItems().clear();
+            tableView.getItems().addAll(billList);
+            setFileSavedStatus(fileStateChanged = false);
+            stage.setTitle(file.getName());
+            currentFile = file;
+        } catch (FileNotFoundException ex) {
+            showErrorDialog(
+                    "File access error", 
+                    "File \"" + file.getAbsolutePath() + "\" seems to be " +
+                    "deleted before the user pressed Open button.");
+        }
         
         undoStack.clear();
         activeEvents = 0;
@@ -771,6 +815,15 @@ public class App extends Application {
                                 ButtonType.OK, 
                                 ButtonType.CANCEL);
         return alert.showAndWait().get() == ButtonType.OK;
+    }
+    
+    private ButtonType askYesNoCancel(String question) {
+        Alert alert = new Alert(AlertType.CONFIRMATION,
+                                question,
+                                ButtonType.YES,
+                                ButtonType.NO,
+                                ButtonType.CANCEL);
+        return alert.showAndWait().get();
     }
     
     private void showErrorDialog(String title, String errorMessage) {
@@ -867,7 +920,6 @@ public class App extends Application {
         }
         
         stage.setTitle(sb.toString());
+        fileStateChanged = !saved;
     }
-    
-    
 }
