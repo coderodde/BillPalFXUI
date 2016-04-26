@@ -681,26 +681,18 @@ public class App extends Application {
     
     private void actionOpenDocument() {
         if (currentFile != null) {
+            // Once here, we have a currently opened file.
             if (fileStateChanged) {
                 ButtonType buttonType = 
                         askYesNoCancel("The current file is modified. " + 
                                        "Save the changes?");
                 
-                boolean doActualFileOpening = true;
+                if (buttonType == ButtonType.CANCEL) {
+                    return;
+                }
                 
                 if (buttonType == ButtonType.YES) {
                     saveFile(currentFile);
-                } else if (buttonType == ButtonType.NO) {
-                    
-                } else if (buttonType == ButtonType.CANCEL) {
-                    doActualFileOpening = false;
-                } else {
-                    throw new IllegalStateException(
-                            "Unrecognized button type: " + buttonType);
-                }
-                
-                if (!doActualFileOpening) {
-                    return;
                 }
             }
         } else {
@@ -709,7 +701,9 @@ public class App extends Application {
                         askYesNoCancel("The current file is not saved. " + 
                                        "Save it?");
                 
-                boolean doActualFileOpening = true;
+                if (buttonType == ButtonType.CANCEL) {
+                    return;
+                }
                 
                 if (buttonType == ButtonType.YES) {
                     File file = saveAs();
@@ -720,17 +714,6 @@ public class App extends Application {
                         // deciding what to do with the current file.
                         return;
                     }
-                } else if (buttonType == ButtonType.NO) {
-                    
-                } else if (buttonType == ButtonType.CANCEL) {
-                    doActualFileOpening = false;
-                } else {
-                    throw new IllegalArgumentException(
-                            "Unrecognized buttont type: " + buttonType);
-                }
-                
-                if (!doActualFileOpening) {
-                    return;
                 }
             }
         }
@@ -747,8 +730,12 @@ public class App extends Application {
             BillListReader reader = 
                     new BillListReader(new FileInputStream(file));
             List<Bill> billList = reader.read();
+            
+            tableView.getItems().removeListener(listChangeListener);
             tableView.getItems().clear();
             tableView.getItems().addAll(billList);
+            tableView.getItems().addListener(listChangeListener);
+            
             setFileSavedStatus(true);
             stage.setTitle(file.getName());
             currentFile = file;
@@ -800,13 +787,9 @@ public class App extends Application {
             }
 
             if (buttonType == ButtonType.YES) {
-                System.out.println("Saving...");
-
                 if (saveAs() == null) {
                     event.consume();
                 }
-            } else {
-                System.out.println("Do not save.");
             }
         } else {
             if (!fileStateChanged) {
@@ -822,10 +805,7 @@ public class App extends Application {
             }
             
             if (buttonType == ButtonType.YES) {
-                System.out.println("saving modified file");
                 saveFile(currentFile);
-            } else {
-                System.out.println("not saving modified file");
             }
         }
     }
