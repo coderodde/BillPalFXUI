@@ -1,0 +1,6 @@
+{
+  "name": "BillPal development site",
+  "tagline": "",
+  "body": "# BillPal 1.6\r\n\r\n### What is it?\r\n\r\nBillPal allows you easily keep track of your bills by arranging them in a table. Attributes presented are expiration date, amount, reference number, IBAN number, and comment among others. User can reorganise the table by rearranging the columns or sorting by a specific attribute. Also a convenient colour coding lets the user to spot fast the bills that are soon to expire making it easy to keep track of how one is doing.\r\n\r\n### Development status: minor usability improvements pending. ",
+  "note": "Don't delete this file! It's used internally to help with page regeneration."
+}
