@@ -18,11 +18,10 @@ public class CellUpdateEditEvent extends AbstractEditEvent {
     private final Bill targetBill;
     
     public CellUpdateEditEvent(App app, 
-                               boolean eventAfterSave, 
                                Bill before, 
                                Bill after,
                                Bill targetBill) {
-        super(app, eventAfterSave);
+        super(app);
         this.before = Objects.requireNonNull(
                 before, 
                 "The prior state of the row is null.");

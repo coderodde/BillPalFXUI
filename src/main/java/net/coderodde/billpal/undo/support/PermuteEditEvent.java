@@ -20,7 +20,7 @@ public class PermuteEditEvent extends AbstractEditEvent {
     public PermuteEditEvent(App app, 
                             boolean eventAfterSave, 
                             int[] permutation) {
-        super(app, eventAfterSave);
+        super(app);
         this.permutation = Objects.requireNonNull(
                 permutation,
                 "The permutation map is null.");

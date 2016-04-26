@@ -22,7 +22,7 @@ public class RowRemovalEditEvent extends AbstractEditEvent {
     public RowRemovalEditEvent(App app, 
                                boolean eventAfterSave,
                                TreeMap<Integer, Bill> removalMap) {
-        super(app, eventAfterSave);
+        super(app);
         this.removalMap = Objects.requireNonNull(
                 removalMap, "The removal map is null.");
     }
