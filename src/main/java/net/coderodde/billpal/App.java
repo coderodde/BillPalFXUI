@@ -44,6 +44,7 @@ public class App extends Application {
     private static final int WINDOW_WIDTH  = 800;
     private static final int WINDOW_HEIGHT = 600;
     private static final String UNSAVED_FILE_TITLE = "Unsaved file";
+    private static final String EDITED_SUFFIX = " - Edited";
     
     private final TableView<Bill> tableView = new TableView<>();
     private Stage stage;
@@ -67,7 +68,6 @@ public class App extends Application {
     private final MenuItem fileMenuOpen    = new MenuItem("Open");
     private final MenuItem fileMenuSave    = new MenuItem("Save");
     private final MenuItem fileMenuSaveAs  = new MenuItem("Save as");
-    private final MenuItem fileMenuClose   = new MenuItem("Close");
     private final MenuItem fileMenuAbout   = new MenuItem("About");
     private final MenuItem fileMenuExit    = new MenuItem("Exit");
     private final MenuItem editMenuNewBill = new MenuItem("New bill");
@@ -191,10 +191,13 @@ public class App extends Application {
                         target.setAmount(t.getNewValue());
                         Bill after = new Bill(target);
                         
-                        pushEditEvent(new CellUpdateEditEvent(App.this, 
-                                                              before, 
-                                                              after, 
-                                                              target));
+                        if (!before.equals(after)) {
+                            setFileSavedStatus(false);
+                            pushEditEvent(new CellUpdateEditEvent(App.this, 
+                                                                  before, 
+                                                                  after, 
+                                                                  target));
+                        }
                     }
                 }
         );
@@ -211,10 +214,13 @@ public class App extends Application {
                     target.setDateReceived(t.getNewValue());
                     Bill after = new Bill(target);
                     
-                    pushEditEvent(new CellUpdateEditEvent(App.this,
-                                                          before, 
-                                                          after, 
-                                                          target));
+                    if (!before.equals(after)) {
+                        setFileSavedStatus(false);
+                        pushEditEvent(new CellUpdateEditEvent(App.this,
+                                                              before, 
+                                                              after, 
+                                                              target));
+                    }
                 }
             }
         );
@@ -234,10 +240,15 @@ public class App extends Application {
                     if (date == null) {
                         target.setExpirationDate(null);
                         Bill after = new Bill(target);
-                        pushEditEvent(new CellUpdateEditEvent(App.this, 
-                                                              before, 
-                                                              after, 
-                                                              target));
+                        
+                        if (!before.equals(after)) {
+                            setFileSavedStatus(false);
+                            pushEditEvent(new CellUpdateEditEvent(App.this, 
+                                                                  before, 
+                                                                  after, 
+                                                                  target));
+                        }
+                        
                         return;
                     }
                     
@@ -250,10 +261,14 @@ public class App extends Application {
                     
                     target.setExpirationDate(cal.getTime());
                     Bill after = new Bill(target);
-                    pushEditEvent(new CellUpdateEditEvent(App.this, 
-                                                          before, 
-                                                          after, 
-                                                          target));
+                    
+                    if (!before.equals(after)) {
+                        setFileSavedStatus(false);
+                        pushEditEvent(new CellUpdateEditEvent(App.this, 
+                                                              before, 
+                                                              after, 
+                                                              target));
+                    }
                 }
             }
         );
@@ -271,16 +286,23 @@ public class App extends Application {
                     target.setPaymentDate(t.getNewValue());
                     Bill after = new Bill(target);
                     
-                    pushEditEvent(new CellUpdateEditEvent(App.this,
-                                                          before, 
-                                                          after, 
-                                                          target));
                     
-                    // A magic spell needed for updating the background color of 
-                    // the expiration date cell whenever the corresponding 
-                    // payment date cell is edited.
-                    tableView.getProperties().put(TableViewSkinBase.RECREATE,
-                                                  Boolean.TRUE);
+                    if (!before.equals(after)) {
+                        setFileSavedStatus(false);
+                        pushEditEvent(new CellUpdateEditEvent(App.this,
+                                                              before, 
+                                                              after, 
+                                                              target));
+                        
+                        // A magic spell needed for updating the background 
+                        // color of the expiration date cell whenever the 
+                        // corresponding payment date cell is edited.
+                        tableView.getProperties()
+                                 .put(TableViewSkinBase.RECREATE,
+                                      Boolean.TRUE);
+                    }
+                    
+                    
                 }
             }
         );
@@ -298,10 +320,14 @@ public class App extends Application {
                     target.setReceiver(t.getNewValue());
                     Bill after = new Bill(target);
                     
-                    pushEditEvent(new CellUpdateEditEvent(App.this, 
-                                                          before, 
-                                                          after, 
-                                                          target));
+                    
+                    if (!before.equals(after)) {
+                        setFileSavedStatus(false);
+                        pushEditEvent(new CellUpdateEditEvent(App.this, 
+                                                              before, 
+                                                              after, 
+                                                              target));
+                    }
                 }
             }
         );
@@ -319,10 +345,14 @@ public class App extends Application {
                     target.setReceiverIban(t.getNewValue());
                     Bill after = new Bill(target);
                     
-                    pushEditEvent(new CellUpdateEditEvent(App.this,
-                                                          before, 
-                                                          after, 
-                                                          target));
+                    
+                    if (!before.equals(after)) {
+                        setFileSavedStatus(false);
+                        pushEditEvent(new CellUpdateEditEvent(App.this,
+                                                              before, 
+                                                              after, 
+                                                              target));
+                    }
                 }
             }
         );
@@ -340,10 +370,14 @@ public class App extends Application {
                     target.setReferenceNumber(t.getNewValue());
                     Bill after = new Bill(target);
                     
-                    pushEditEvent(new CellUpdateEditEvent(App.this, 
-                                                          before, 
-                                                          after, 
-                                                          target));
+                    
+                    if (!before.equals(after)) {
+                        setFileSavedStatus(false);
+                        pushEditEvent(new CellUpdateEditEvent(App.this, 
+                                                              before, 
+                                                              after, 
+                                                              target));
+                    }
                 }
             }
         );
@@ -361,10 +395,14 @@ public class App extends Application {
                     target.setBillNumber(t.getNewValue());
                     Bill after = new Bill(target);
                     
-                    pushEditEvent(new CellUpdateEditEvent(App.this,
-                                                          before, 
-                                                          after, 
-                                                          target));
+                    
+                    if (!before.equals(after)) {
+                        setFileSavedStatus(false);
+                        pushEditEvent(new CellUpdateEditEvent(App.this,
+                                                              before, 
+                                                              after, 
+                                                              target));
+                    }
                 }
             }
         );
@@ -382,10 +420,13 @@ public class App extends Application {
                     target.setComment(t.getNewValue());
                     Bill after = new Bill(target);
                     
-                    pushEditEvent(new CellUpdateEditEvent(App.this, 
-                                                          before, 
-                                                          after, 
-                                                          target));
+                    if (!before.equals(after)) {
+                        setFileSavedStatus(false);
+                        pushEditEvent(new CellUpdateEditEvent(App.this, 
+                                                              before, 
+                                                              after, 
+                                                              target));
+                    }
                 }
             }
         );
@@ -450,7 +491,7 @@ public class App extends Application {
     public void start(Stage stage) {
         this.stage = stage;
         this.stage.setOnCloseRequest((WindowEvent event) -> {
-            actionClose();
+            actionOnClose(event);
         });
         
         stage.setWidth(WINDOW_WIDTH);
@@ -474,7 +515,6 @@ public class App extends Application {
                                    fileMenuOpen,
                                    fileMenuSave,
                                    fileMenuSaveAs,
-                                   fileMenuClose,
                                    new SeparatorMenuItem(),
                                    fileMenuAbout,
                                    fileMenuExit);
@@ -493,7 +533,6 @@ public class App extends Application {
         fileMenuOpen   .setOnAction((e) -> { actionOpenDocument(); });
         fileMenuSave   .setOnAction((e) -> { actionSave();         });
         fileMenuSaveAs .setOnAction((e) -> { actionSaveAs();       });
-//        fileMenuClose  .setOnAction((e) -> { actionClose();        });
         fileMenuAbout  .setOnAction((e) -> { actionAbout();        });
         fileMenuExit   .setOnAction((e) -> { actionExit();         });
         
@@ -710,18 +749,17 @@ public class App extends Application {
             List<Bill> billList = reader.read();
             tableView.getItems().clear();
             tableView.getItems().addAll(billList);
-            setFileSavedStatus(fileStateChanged = false);
+            setFileSavedStatus(true);
             stage.setTitle(file.getName());
             currentFile = file;
+            undoStack.clear();
+            activeEvents = 0;
         } catch (FileNotFoundException ex) {
             showErrorDialog(
                     "File access error", 
                     "File \"" + file.getAbsolutePath() + "\" seems to be " +
                     "deleted before the user pressed Open button.");
         }
-        
-        undoStack.clear();
-        activeEvents = 0;
     }
     
     private void actionSave() {
@@ -743,29 +781,53 @@ public class App extends Application {
         saveAs();
     }
     
-    private void actionClose() {
+    /**
+     * This method is invoked when the user closes the entire application. 
+     */
+    private void actionOnClose(final WindowEvent event) {
         if (currentFile == null) {
-            if (fileStateChanged) {
-                boolean doSave = askConfirmation(
-                    "The current file is not saved. Save it?");
-                
-                if (doSave) {
-                    saveAs();
+            if (!fileStateChanged) {
+                return;
+            }
+            
+            final ButtonType buttonType = askYesNoCancel(
+                    "The current fils is not saved. Save it?");
+
+            if (buttonType == ButtonType.CANCEL) {
+                // Do not close after all.
+                event.consume();
+                return;
+            }
+
+            if (buttonType == ButtonType.YES) {
+                System.out.println("Saving...");
+
+                if (saveAs() == null) {
+                    event.consume();
                 }
+            } else {
+                System.out.println("Do not save.");
             }
         } else {
-            boolean doUpdate = askConfirmation(
+            if (!fileStateChanged) {
+                return;
+            }
+            
+            final ButtonType buttonType = askYesNoCancel(
                     "The current file has been modified. Save the changes?");
             
-            if (doUpdate) {
+            if (buttonType == ButtonType.CANCEL) {
+                event.consume();
+                return;
+            }
+            
+            if (buttonType == ButtonType.YES) {
+                System.out.println("saving modified file");
                 saveFile(currentFile);
+            } else {
+                System.out.println("not saving modified file");
             }
         }
-        
-        tableView.getItems().clear();
-        stage.setTitle("Unsaved file*");
-        undoStack.clear();
-        activeEvents = 0;
     }
     
     private void actionAbout() {
@@ -903,10 +965,11 @@ public class App extends Application {
     
     private void setFileSavedStatus(boolean saved) {
         StringBuilder sb = new StringBuilder();
-        sb.append(currentFile == null ? "Unsaved file" : currentFile.getName());
+        sb.append(currentFile == null ? UNSAVED_FILE_TITLE : 
+                                        currentFile.getName());
         
         if (!saved) {
-            sb.append(" - Edited");
+            sb.append(EDITED_SUFFIX);
         }
         
         stage.setTitle(sb.toString());

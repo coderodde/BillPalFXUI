@@ -186,6 +186,30 @@ public class Bill {
     }
     
     @Override
+    public boolean equals(Object o) {
+        if (o == null) {
+            return false;
+        }
+        
+        if (!getClass().equals(o.getClass())) {
+            return false;
+        }
+        
+        final Bill other = (Bill) o;
+        
+        return 
+              Objects.equals(getAmount(),          other.getAmount())
+           && Objects.equals(getBillNumber(),      other.getBillNumber())
+           && Objects.equals(getComment(),         other.getComment())
+           && Objects.equals(getDateReceived(),    other.getDateReceived())
+           && Objects.equals(getExpirationDate(),  other.getExpirationDate())
+           && Objects.equals(getPaymentDate(),     other.getPaymentDate())
+           && Objects.equals(getReceiver(),        other.getReceiver())
+           && Objects.equals(getReceiverIban(),    other.getReceiverIban())
+           && Objects.equals(getReferenceNumber(), other.getReferenceNumber());
+    }
+    
+    @Override
     public String toString() {
         return new StringBuilder().append("[Bill: amount = ")
                                   .append(amount)

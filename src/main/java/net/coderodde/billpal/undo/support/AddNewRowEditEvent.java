@@ -15,8 +15,8 @@ public class AddNewRowEditEvent extends AbstractEditEvent {
 
     private Bill row;
     
-    public AddNewRowEditEvent(App app, boolean eventAfterSave) {
-        super(app, eventAfterSave);
+    public AddNewRowEditEvent(App app) {
+        super(app);
     }
     
     @Override
