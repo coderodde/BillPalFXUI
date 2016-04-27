@@ -97,10 +97,14 @@ public class App extends Application {
     private final ListChangeListener<Bill> listChangeListener = 
             new BillListChangeListener(this);
     
+    void onUpdate() {
+        if (!fileStateChanged) {
+            fileStateChanged = true;
+            setFileSavedStatus(false);
+        }
+    }
+    
     public App() {
-        this.editMenuRedo.setDisable(true);
-        this.editMenuUndo.setDisable(true);
-        
         this.tableColumnExpirationDate  = new TableColumn<>("Expires");
         this.tableColumnPaymentDate     = new TableColumn<>("Paid");
         this.tableColumnAmount          = new TableColumn<>("Amount");
@@ -111,362 +115,22 @@ public class App extends Application {
         this.tableColumnBillNumber      = new TableColumn<>("Bill number");
         this.tableColumnComment         = new TableColumn<>("Comment");
 
+        this.editMenuRedo.setDisable(true);
+        this.editMenuUndo.setDisable(true);
+        
         tableColumnExpirationDate.setStyle("-fx-font-weight: bold;");
         
-        tableColumnAmount.setCellValueFactory(
-                new PropertyValueFactory<>("amount")
-        );
+        setTableColumnCellValueFactories();
 
-        tableColumnDateReceived.setCellValueFactory(
-                new PropertyValueFactory<>("dateReceived")
-        );
-
-        tableColumnExpirationDate.setCellValueFactory(
-                new PropertyValueFactory<>("expirationDate")
-        );
-
-        tableColumnPaymentDate.setCellValueFactory(
-                new PropertyValueFactory<>("paymentDate")
-        );
-
-        tableColumnReceiver.setCellValueFactory(
-                new PropertyValueFactory<>("receiver")
-        );
-        
-        tableColumnReceiverIban.setCellValueFactory(
-                new PropertyValueFactory<>("receiverIban")
-        );
-
-        tableColumnReferenceNumber.setCellValueFactory(
-                new PropertyValueFactory<>("referenceNumber")
-        );
-
-        tableColumnBillNumber.setCellValueFactory(
-                new PropertyValueFactory<>("billNumber")
-        );
-
-        tableColumnComment.setCellValueFactory(
-                new PropertyValueFactory<>("comment")
-        );
-
-        tableColumnAmount.setCellFactory(
-            TextFieldTableCell.
-                    <Bill, Double>forTableColumn(new DoubleStringConverter()));
-
-        tableColumnDateReceived.setCellFactory(
-            TextFieldTableCell.
-                    <Bill, Date>forTableColumn(new DateStringConverter()));
-        
-        tableColumnExpirationDate.setCellFactory(
-                new ExpirationDateCellFactory());
-
-        tableColumnPaymentDate.setCellFactory(
-            TextFieldTableCell.
-                    <Bill, Date>forTableColumn(new DateStringConverter()));
-
-        tableColumnReceiver.setCellFactory(
-            TextFieldTableCell.<Bill>forTableColumn());
-
-        tableColumnReceiverIban.setCellFactory(
-            TextFieldTableCell.<Bill>forTableColumn());
-
-        tableColumnReferenceNumber.setCellFactory(
-            TextFieldTableCell.<Bill>forTableColumn());
-
-        tableColumnBillNumber.setCellFactory(
-            TextFieldTableCell.<Bill>forTableColumn());
-
-        tableColumnComment.setCellFactory(
-            TextFieldTableCell.<Bill>forTableColumn());
-
-        tableColumnAmount.setOnEditCommit(
-                new EventHandler<CellEditEvent<Bill, Double>>() {
-
-                    @Override
-                    public void handle(CellEditEvent<Bill, Double> t) {
-                        Bill target = t.getTableView()
-                                       .getItems()
-                                       .get(t.getTablePosition().getRow());
-                        Bill before = new Bill(target);
-                        target.setAmount(t.getNewValue());
-                        Bill after = new Bill(target);
-                        
-                        if (!before.equals(after)) {
-                            setFileSavedStatus(false);
-                            pushEditEvent(new CellUpdateEditEvent(App.this, 
-                                                                  before, 
-                                                                  after, 
-                                                                  target));
-                        }
-                    }
-                }
-        );
-
-        tableColumnDateReceived.setOnEditCommit(
-                new EventHandler<CellEditEvent<Bill, Date>>() {
-
-                @Override
-                public void handle(CellEditEvent<Bill, Date> t) {
-                    Bill target = t.getTableView()
-                                   .getItems()
-                                   .get(t.getTablePosition().getRow());
-                    Bill before = new Bill(target);
-                    target.setDateReceived(t.getNewValue());
-                    Bill after = new Bill(target);
-                    
-                    if (!before.equals(after)) {
-                        setFileSavedStatus(false);
-                        pushEditEvent(new CellUpdateEditEvent(App.this,
-                                                              before, 
-                                                              after, 
-                                                              target));
-                    }
-                }
-            }
-        );
-        
-        tableColumnExpirationDate.setOnEditCommit(
-                new EventHandler<CellEditEvent<Bill, Date>>() {
-
-                @Override
-                public void handle(CellEditEvent<Bill, Date> t) {
-                    Bill target = t.getTableView()
-                                   .getItems()
-                                   .get(t.getTablePosition().getRow());
-                    
-                    Bill before = new Bill(target);
-                    Date date = t.getNewValue();
-                    
-                    if (date == null) {
-                        target.setExpirationDate(null);
-                        Bill after = new Bill(target);
-                        
-                        if (!before.equals(after)) {
-                            setFileSavedStatus(false);
-                            pushEditEvent(new CellUpdateEditEvent(App.this, 
-                                                                  before, 
-                                                                  after, 
-                                                                  target));
-                        }
-                        
-                        return;
-                    }
-                    
-                    Calendar cal = Calendar.getInstance();
-                    cal.setTime(date);
-                    
-                    cal.set(Calendar.HOUR, 0);
-                    cal.set(Calendar.MINUTE, 0);
-                    cal.set(Calendar.SECOND, 0);
-                    
-                    target.setExpirationDate(cal.getTime());
-                    Bill after = new Bill(target);
-                    
-                    if (!before.equals(after)) {
-                        setFileSavedStatus(false);
-                        pushEditEvent(new CellUpdateEditEvent(App.this, 
-                                                              before, 
-                                                              after, 
-                                                              target));
-                    }
-                }
-            }
-        );
-
-        tableColumnPaymentDate.setOnEditCommit(
-                new EventHandler<CellEditEvent<Bill, Date>>() {
-
-                @Override
-                public void handle(CellEditEvent<Bill, Date> t) {
-                    Bill target = t.getTableView()
-                                   .getItems()
-                                   .get(t.getTablePosition().getRow());
-                    
-                    Bill before = new Bill(target);
-                    target.setPaymentDate(t.getNewValue());
-                    Bill after = new Bill(target);
-                    
-                    
-                    if (!before.equals(after)) {
-                        setFileSavedStatus(false);
-                        pushEditEvent(new CellUpdateEditEvent(App.this,
-                                                              before, 
-                                                              after, 
-                                                              target));
-                        
-                        // A magic spell needed for updating the background 
-                        // color of the expiration date cell whenever the 
-                        // corresponding payment date cell is edited.
-                        tableView.getProperties()
-                                 .put(TableViewSkinBase.RECREATE,
-                                      Boolean.TRUE);
-                    }
-                    
-                    
-                }
-            }
-        );
-
-        tableColumnReceiver.setOnEditCommit(
-                new EventHandler<CellEditEvent<Bill, String>>() {
-
-                @Override
-                public void handle(CellEditEvent<Bill, String> t) {
-                    Bill target = t.getTableView()
-                                   .getItems()
-                                   .get(t.getTablePosition().getRow());
-                    
-                    Bill before = new Bill(target);
-                    target.setReceiver(t.getNewValue());
-                    Bill after = new Bill(target);
-                    
-                    
-                    if (!before.equals(after)) {
-                        setFileSavedStatus(false);
-                        pushEditEvent(new CellUpdateEditEvent(App.this, 
-                                                              before, 
-                                                              after, 
-                                                              target));
-                    }
-                }
-            }
-        );
-
-        tableColumnReceiverIban.setOnEditCommit(
-                new EventHandler<CellEditEvent<Bill, String>>() {
-
-                @Override
-                public void handle(CellEditEvent<Bill, String> t) {
-                    Bill target = t.getTableView()
-                                   .getItems()
-                                   .get(t.getTablePosition().getRow());
-                    
-                    Bill before = new Bill(target);
-                    target.setReceiverIban(t.getNewValue());
-                    Bill after = new Bill(target);
-                    
-                    
-                    if (!before.equals(after)) {
-                        setFileSavedStatus(false);
-                        pushEditEvent(new CellUpdateEditEvent(App.this,
-                                                              before, 
-                                                              after, 
-                                                              target));
-                    }
-                }
-            }
-        );
-
-        tableColumnReferenceNumber.setOnEditCommit(
-                new EventHandler<CellEditEvent<Bill, String>>() {
-
-                @Override
-                public void handle(CellEditEvent<Bill, String> t) {
-                    Bill target = t.getTableView()
-                                   .getItems()
-                                   .get(t.getTablePosition().getRow());
-                    
-                    Bill before = new Bill(target);
-                    target.setReferenceNumber(t.getNewValue());
-                    Bill after = new Bill(target);
-                    
-                    
-                    if (!before.equals(after)) {
-                        setFileSavedStatus(false);
-                        pushEditEvent(new CellUpdateEditEvent(App.this, 
-                                                              before, 
-                                                              after, 
-                                                              target));
-                    }
-                }
-            }
-        );
-
-        tableColumnBillNumber.setOnEditCommit(
-                new EventHandler<CellEditEvent<Bill, String>>() {
-
-                @Override
-                public void handle(CellEditEvent<Bill, String> t) {
-                    Bill target = t.getTableView()
-                                   .getItems()
-                                   .get(t.getTablePosition().getRow());
-                    
-                    Bill before = new Bill(target);
-                    target.setBillNumber(t.getNewValue());
-                    Bill after = new Bill(target);
-                    
-                    
-                    if (!before.equals(after)) {
-                        setFileSavedStatus(false);
-                        pushEditEvent(new CellUpdateEditEvent(App.this,
-                                                              before, 
-                                                              after, 
-                                                              target));
-                    }
-                }
-            }
-        );
-
-        tableColumnComment.setOnEditCommit(
-                new EventHandler<CellEditEvent<Bill, String>>() {
-
-                @Override
-                public void handle(CellEditEvent<Bill, String> t) {
-                    Bill target = t.getTableView()
-                                   .getItems()
-                                   .get(t.getTablePosition().getRow());
-                    
-                    Bill before = new Bill(target);
-                    target.setComment(t.getNewValue());
-                    Bill after = new Bill(target);
-                    
-                    if (!before.equals(after)) {
-                        setFileSavedStatus(false);
-                        pushEditEvent(new CellUpdateEditEvent(App.this, 
-                                                              before, 
-                                                              after, 
-                                                              target));
-                    }
-                }
-            }
-        );
-
-        tableView.getColumns().addAll(tableColumnExpirationDate,
-                                      tableColumnPaymentDate,
-                                      tableColumnAmount,
-                                      
-                                      tableColumnDateReceived,
-                                      tableColumnReceiver,
-                                      tableColumnReceiverIban,
-                                      
-                                      tableColumnReferenceNumber,
-                                      tableColumnBillNumber,
-                                      tableColumnComment);
+        setColumnCellFactories();
+        setCellEditEventHandlers();
+        addColumnsToTableView();
 
         setMenuActions();
         buildTablePopupMenu();
-
-        tableColumnExpirationDate .setPrefWidth(WINDOW_WIDTH / 10);
-        tableColumnPaymentDate    .setPrefWidth(WINDOW_WIDTH / 10);
-        tableColumnAmount         .setPrefWidth(WINDOW_WIDTH / 10);
-
-        tableColumnDateReceived   .setPrefWidth(2 * WINDOW_WIDTH / 10);
-        tableColumnReceiver       .setPrefWidth(WINDOW_WIDTH / 10);
-        tableColumnReceiverIban   .setPrefWidth(WINDOW_WIDTH / 10);
-
-        tableColumnReferenceNumber.setPrefWidth(WINDOW_WIDTH / 10);
-        tableColumnBillNumber     .setPrefWidth(WINDOW_WIDTH / 10);
-        tableColumnComment        .setPrefWidth(WINDOW_WIDTH / 10);
+        setPreferredColumnWidths();
         
-        tableView.getItems().addListener(
-                (ListChangeListener.Change<? extends Bill> c) -> {
-            if (!fileStateChanged) {
-                fileStateChanged = true;
-                setFileSavedStatus(false);
-            }
-        });
-        
-        tableView.getItems().addListener(listChangeListener);
+        setItemListeners();
     }
     
     public List<Bill> getItems() {
@@ -528,6 +192,53 @@ public class App extends Application {
         menuBar.getMenus().addAll(fileMenu, editMenu);
     }
 
+    
+    private void addColumnsToTableView() {
+        tableView.getColumns().addAll(tableColumnExpirationDate,
+                                      tableColumnPaymentDate,
+                                      tableColumnAmount,
+                                      
+                                      tableColumnDateReceived,
+                                      tableColumnReceiver,
+                                      tableColumnReceiverIban,
+                                      
+                                      tableColumnReferenceNumber,
+                                      tableColumnBillNumber,
+                                      tableColumnComment);
+    }
+    
+    private void setItemListeners() {
+        // A simple item list listener used for turning the unsaved status of
+        // the current file.
+//        tableView.getItems().addListener(
+//                (ListChangeListener.Change<? extends Bill> c) -> {
+//            
+//            
+//            System.out.println("dfsdafa");
+//        });
+        
+        // A listener for recording the three types of changes:
+        // 1. add row,
+        // 2. remove selected rows,
+        // 3. sort column.
+        // We need this for being able to undo/redo these types of edit events.
+        tableView.getItems().addListener(listChangeListener);
+    }
+    
+    private void setPreferredColumnWidths() {
+        tableColumnExpirationDate .setPrefWidth(WINDOW_WIDTH / 10);
+        tableColumnPaymentDate    .setPrefWidth(WINDOW_WIDTH / 10);
+        tableColumnAmount         .setPrefWidth(WINDOW_WIDTH / 10);
+
+        tableColumnDateReceived   .setPrefWidth(2 * WINDOW_WIDTH / 10);
+        tableColumnReceiver       .setPrefWidth(WINDOW_WIDTH / 10);
+        tableColumnReceiverIban   .setPrefWidth(WINDOW_WIDTH / 10);
+
+        tableColumnReferenceNumber.setPrefWidth(WINDOW_WIDTH / 10);
+        tableColumnBillNumber     .setPrefWidth(WINDOW_WIDTH / 10);
+        tableColumnComment        .setPrefWidth(WINDOW_WIDTH / 10);
+    }
+    
     private void setMenuActions() {
         fileMenuNew    .setOnAction((e) -> { actionNewDocument();  });
         fileMenuOpen   .setOnAction((e) -> { actionOpenDocument(); });
@@ -736,9 +447,10 @@ public class App extends Application {
             tableView.getItems().addAll(billList);
             tableView.getItems().addListener(listChangeListener);
             
-            setFileSavedStatus(true);
-            stage.setTitle(file.getName());
+            // Order dependence: setFileSavedStatus relies on the value of
+            // currentFile. So set currentFile first, setFileSavedStateus later.
             currentFile = file;
+            setFileSavedStatus(true);
             undoStack.clear();
             activeEvents = 0;
         } catch (FileNotFoundException ex) {
@@ -753,13 +465,13 @@ public class App extends Application {
         if (currentFile != null) {
             if (fileStateChanged) {
                 saveFile(currentFile);
-                stage.setTitle(currentFile.getName());
+                setFileSavedStatus(true);
             }
         } else {
             currentFile = saveAs();
             
             if (currentFile != null) {
-                stage.setTitle(currentFile.getName());
+                setFileSavedStatus(true);
             }
         }
     }
@@ -954,5 +666,378 @@ public class App extends Application {
         
         stage.setTitle(sb.toString());
         fileStateChanged = !saved;
+    }
+    
+    /////////////////////////////////////////
+    private void setCellEditEventHandlers() {
+        setAmountCellEditEventHandler();
+        setDateReceivedCellEditEventHandler();
+        setExpirationDateCellEditEventHandler();
+        
+        setPaymentDateCellEditEventHandler();
+        setReceiverCellEditEventHandler();
+        setReceiverIbanCellEditEventHandler();
+        
+        setReferenceNumberCellEditEventHandler();
+        setBillNumberCellEditEventHanlder();
+        setCommentCellEditEventHandler();
+    }
+    
+    private void setAmountCellEditEventHandler() {
+        tableColumnAmount.setOnEditCommit((CellEditEvent<Bill, Double> t) -> {
+            Bill target = t.getTableView()
+                    .getItems()
+                    .get(t.getTablePosition().getRow());
+            Bill before = new Bill(target);
+            target.setAmount(t.getNewValue());
+            Bill after = new Bill(target);
+            
+            if (!before.equals(after)) {
+                setFileSavedStatus(false);
+                pushEditEvent(new CellUpdateEditEvent(App.this,
+                        before,
+                        after,
+                        target));
+            }
+        });
+    }
+    
+    private void setDateReceivedCellEditEventHandler() {
+        tableColumnDateReceived.setOnEditCommit(
+                (CellEditEvent<Bill, Date> t) -> {
+            Bill target = t.getTableView()
+                    .getItems()
+                    .get(t.getTablePosition().getRow());
+            Bill before = new Bill(target);
+            target.setDateReceived(t.getNewValue());
+            Bill after = new Bill(target);
+            
+            if (!before.equals(after)) {
+                setFileSavedStatus(false);
+                pushEditEvent(new CellUpdateEditEvent(App.this,
+                        before,
+                        after,
+                        target));
+            }
+        });
+    }
+    
+    private void setExpirationDateCellEditEventHandler() {
+        tableColumnExpirationDate.setOnEditCommit(
+                (CellEditEvent<Bill, Date> t) -> {
+            Bill target = t.getTableView()
+                    .getItems()
+                    .get(t.getTablePosition().getRow());
+            
+            Bill before = new Bill(target);
+            Date date = t.getNewValue();
+            
+            if (date == null) {
+                target.setExpirationDate(null);
+                Bill after = new Bill(target);
+                
+                if (!before.equals(after)) {
+                    setFileSavedStatus(false);
+                    pushEditEvent(new CellUpdateEditEvent(App.this,
+                            before,
+                            after,
+                            target));
+                }
+                
+                return;
+            }
+            
+            Calendar cal = Calendar.getInstance();
+            cal.setTime(date);
+            
+            cal.set(Calendar.HOUR, 0);
+            cal.set(Calendar.MINUTE, 0);
+            cal.set(Calendar.SECOND, 0);
+            
+            target.setExpirationDate(cal.getTime());
+            Bill after = new Bill(target);
+            
+            if (!before.equals(after)) {
+                setFileSavedStatus(false);
+                pushEditEvent(new CellUpdateEditEvent(App.this,
+                        before,
+                        after,
+                        target));
+            }
+        });
+    }
+    
+    private void setPaymentDateCellEditEventHandler() {
+        tableColumnPaymentDate.setOnEditCommit(
+                new EventHandler<CellEditEvent<Bill, Date>>() {
+
+                @Override
+                public void handle(CellEditEvent<Bill, Date> t) {
+                    Bill target = t.getTableView()
+                                   .getItems()
+                                   .get(t.getTablePosition().getRow());
+                    
+                    Bill before = new Bill(target);
+                    target.setPaymentDate(t.getNewValue());
+                    Bill after = new Bill(target);
+                    
+                    
+                    if (!before.equals(after)) {
+                        setFileSavedStatus(false);
+                        pushEditEvent(new CellUpdateEditEvent(App.this,
+                                                              before, 
+                                                              after, 
+                                                              target));
+                        
+                        // A magic spell needed for updating the background 
+                        // color of the expiration date cell whenever the 
+                        // corresponding payment date cell is edited.
+                        tableView.getProperties()
+                                 .put(TableViewSkinBase.RECREATE,
+                                      Boolean.TRUE);
+                    }
+                    
+                    
+                }
+            }
+        );
+    }
+    
+    private void setReceiverCellEditEventHandler() {
+        tableColumnReceiver.setOnEditCommit((CellEditEvent<Bill, String> t) -> {
+            Bill target = t.getTableView()
+                    .getItems()
+                    .get(t.getTablePosition().getRow());
+            
+            Bill before = new Bill(target);
+            target.setReceiver(t.getNewValue());
+            Bill after = new Bill(target);
+            
+            
+            if (!before.equals(after)) {
+                setFileSavedStatus(false);
+                pushEditEvent(new CellUpdateEditEvent(App.this,
+                        before,
+                        after,
+                        target));
+            }
+        });
+    }
+    
+    private void setReceiverIbanCellEditEventHandler() {
+        tableColumnReceiverIban.setOnEditCommit(
+                (CellEditEvent<Bill, String> t) -> {
+            Bill target = t.getTableView()
+                    .getItems()
+                    .get(t.getTablePosition().getRow());
+            
+            Bill before = new Bill(target);
+            target.setReceiverIban(t.getNewValue());
+            Bill after = new Bill(target);
+            
+            
+            if (!before.equals(after)) {
+                setFileSavedStatus(false);
+                pushEditEvent(new CellUpdateEditEvent(App.this,
+                        before,
+                        after,
+                        target));
+            }
+        });
+    }
+    
+    private void setReferenceNumberCellEditEventHandler() {
+        tableColumnReferenceNumber.setOnEditCommit(
+                (CellEditEvent<Bill, String> t) -> {
+            Bill target = t.getTableView()
+                    .getItems()
+                    .get(t.getTablePosition().getRow());
+            
+            Bill before = new Bill(target);
+            target.setReferenceNumber(t.getNewValue());
+            Bill after = new Bill(target);
+            
+            
+            if (!before.equals(after)) {
+                setFileSavedStatus(false);
+                pushEditEvent(new CellUpdateEditEvent(App.this,
+                        before,
+                        after,
+                        target));
+            }
+        });
+    }
+    
+    private void setBillNumberCellEditEventHanlder() {
+        tableColumnBillNumber.setOnEditCommit(
+                (CellEditEvent<Bill, String> t) -> {
+            Bill target = t.getTableView()
+                    .getItems()
+                    .get(t.getTablePosition().getRow());
+            
+            Bill before = new Bill(target);
+            target.setBillNumber(t.getNewValue());
+            Bill after = new Bill(target);
+            
+            
+            if (!before.equals(after)) {
+                setFileSavedStatus(false);
+                pushEditEvent(new CellUpdateEditEvent(App.this,
+                        before,
+                        after,
+                        target));
+            }
+        });
+    }
+    
+    private void setCommentCellEditEventHandler() {
+        tableColumnComment.setOnEditCommit((CellEditEvent<Bill, String> t) -> {
+            Bill target = t.getTableView()
+                    .getItems()
+                    .get(t.getTablePosition().getRow());
+            
+            Bill before = new Bill(target);
+            target.setComment(t.getNewValue());
+            Bill after = new Bill(target);
+            
+            if (!before.equals(after)) {
+                setFileSavedStatus(false);
+                pushEditEvent(new CellUpdateEditEvent(App.this,
+                        before,
+                        after,
+                        target));
+            }
+        });
+    }
+    
+    ///////////////////////////////////////
+    private void setColumnCellFactories() {
+        setAmountColumnCellFactory();
+        setDateReceivedColumnCellFactory();
+        setExpirationDateColumnCellFactory();
+        
+        setPaymentDateColumnCellFactory();
+        setReceiverColumnCellFactory();
+        setReceiverIbanColumnCellFactory();
+        
+        setReferenceNumberColumnCellFactory();
+        setBillNumberColumnCellFactory();
+        setCommentColumnCellFactory();
+    }
+    
+    private void setAmountColumnCellFactory() {
+        tableColumnAmount.setCellFactory(
+            TextFieldTableCell.
+                    <Bill, Double>forTableColumn(new DoubleStringConverter()));
+    }
+    
+    private void setDateReceivedColumnCellFactory() {
+        tableColumnDateReceived.setCellFactory(
+            TextFieldTableCell.
+                    <Bill, Date>forTableColumn(new DateStringConverter()));
+    }
+    
+    private void setExpirationDateColumnCellFactory() {
+        tableColumnExpirationDate.setCellFactory(
+                new ExpirationDateCellFactory());
+    }
+    
+    private void setPaymentDateColumnCellFactory() {
+        tableColumnPaymentDate.setCellFactory(
+            TextFieldTableCell.
+                    <Bill, Date>forTableColumn(new DateStringConverter()));
+    }
+    
+    private void setReceiverColumnCellFactory() {
+        tableColumnReceiver.setCellFactory(
+            TextFieldTableCell.<Bill>forTableColumn());
+    }
+    
+    private void setReceiverIbanColumnCellFactory() {
+        tableColumnReceiverIban.setCellFactory(
+            TextFieldTableCell.<Bill>forTableColumn());
+    }
+    
+    private void setReferenceNumberColumnCellFactory() {
+        tableColumnReferenceNumber.setCellFactory(
+            TextFieldTableCell.<Bill>forTableColumn());
+    }
+    
+    private void setBillNumberColumnCellFactory() {
+        tableColumnBillNumber.setCellFactory(
+            TextFieldTableCell.<Bill>forTableColumn());
+    }
+    
+    private void setCommentColumnCellFactory() {
+        tableColumnComment.setCellFactory(
+            TextFieldTableCell.<Bill>forTableColumn());
+    }
+    
+    private void setAmountTableColumnCellValueFactory() {
+        tableColumnAmount.setCellValueFactory(
+                new PropertyValueFactory<>("amount")
+        );
+    }
+    
+    private void setDateReceivedTableColumnCellValueFactory() {
+        tableColumnDateReceived.setCellValueFactory(
+                new PropertyValueFactory<>("dateReceived")
+        );
+    }
+    
+    private void setExpirationDateTableColumnCellValueFactory() {
+        tableColumnExpirationDate.setCellValueFactory(
+                new PropertyValueFactory<>("expirationDate")
+        );
+    }
+    
+    private void setPaymentDateTableColumnCellValueFactory() {
+        tableColumnPaymentDate.setCellValueFactory(
+                new PropertyValueFactory<>("paymentDate")
+        );
+    }
+    
+    private void setReceiverTableColumnCellValueFactory() {
+        tableColumnReceiver.setCellValueFactory(
+                new PropertyValueFactory<>("receiver")
+        );
+    }
+    
+    private void setReceiverIbanTableColumnCellValueFactory() {
+        tableColumnReceiverIban.setCellValueFactory(
+                new PropertyValueFactory<>("receiverIban")
+        );
+    }
+    
+    private void setReferenceNumberTableColumnCellValueFactory() {
+        tableColumnReferenceNumber.setCellValueFactory(
+                new PropertyValueFactory<>("referenceNumber")
+        );
+    }
+    
+    private void setBillNumberTableColumnCellValueFactory() {
+        tableColumnBillNumber.setCellValueFactory(
+                new PropertyValueFactory<>("billNumber")
+        );
+    }
+    
+    private void setCommentTableColumnCellValueFactory() {
+        tableColumnComment.setCellValueFactory(
+                new PropertyValueFactory<>("comment")
+        );
+    }
+    
+    private void setTableColumnCellValueFactories() {
+        setAmountTableColumnCellValueFactory();
+        setDateReceivedTableColumnCellValueFactory();
+        setExpirationDateTableColumnCellValueFactory();
+        
+        setPaymentDateTableColumnCellValueFactory();
+        setReceiverTableColumnCellValueFactory();
+        setReceiverIbanTableColumnCellValueFactory();
+        
+        setReferenceNumberTableColumnCellValueFactory();
+        setBillNumberTableColumnCellValueFactory();
+        setCommentTableColumnCellValueFactory();
     }
 }

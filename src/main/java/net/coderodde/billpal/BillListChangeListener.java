@@ -72,5 +72,7 @@ class BillListChangeListener implements ListChangeListener<Bill> {
 
         app.setUndoEditMenuDisabled(!app.canUndo());
         app.setRedoEditMenuDisabled(!app.canRedo());
+        
+        app.onUpdate();
     }
 }
