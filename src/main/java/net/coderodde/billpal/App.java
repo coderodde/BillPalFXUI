@@ -87,6 +87,7 @@ public class App extends Application {
 
     // File state:
     private boolean fileStateChanged = false;
+    private boolean lastActionWasSave = false;
     private File currentFile;
     
     // Undo/redo stack stuff:
@@ -97,14 +98,9 @@ public class App extends Application {
     private final ListChangeListener<Bill> listChangeListener = 
             new BillListChangeListener(this);
     
-    void onUpdate() {
-        if (!fileStateChanged) {
-            fileStateChanged = true;
-            setFileSavedStatus(false);
-        }
-    }
-    
     public App() {
+        // Since I honour 80 chars width, these do not fit in at declarations,
+        // so initialize them here.
         this.tableColumnExpirationDate  = new TableColumn<>("Expires");
         this.tableColumnPaymentDate     = new TableColumn<>("Paid");
         this.tableColumnAmount          = new TableColumn<>("Amount");
@@ -131,6 +127,8 @@ public class App extends Application {
         setPreferredColumnWidths();
         
         setItemListeners();
+        
+        lastActionWasSave = true; // An empty document is trivially "saved".
     }
     
     public List<Bill> getItems() {
@@ -174,6 +172,13 @@ public class App extends Application {
         launch(args);
     }
 
+    void onUpdate() {
+        if (!fileStateChanged) {
+            fileStateChanged = true;
+            setFileSavedStatus(false);
+        }
+    }
+    
     private void buildMenu() {
         fileMenu.getItems().addAll(fileMenuNew,
                                    fileMenuOpen,
@@ -335,7 +340,6 @@ public class App extends Application {
                             "The current document is not saved. Save it?");
 
             if (buttonType == ButtonType.YES) {
-                System.out.println("Yes");
                 File file = saveAs();
                 
                 if (file == null) {
@@ -350,7 +354,6 @@ public class App extends Application {
                 tableView.getItems().clear();
                 setFileSavedStatus(true);
             } else if (buttonType == ButtonType.NO) {
-                System.out.println("No");
                 undoStack.clear();
                 activeEvents = 0;
                 tableView.getItems().clear();
@@ -453,6 +456,9 @@ public class App extends Application {
             setFileSavedStatus(true);
             undoStack.clear();
             activeEvents = 0;
+            
+            editMenuUndo.setDisable(true);
+            editMenuRedo.setDisable(true);
         } catch (FileNotFoundException ex) {
             showErrorDialog(
                     "File access error", 
@@ -462,17 +468,39 @@ public class App extends Application {
     }
     
     private void actionSave() {
+        boolean fileSaved = false;
+        
         if (currentFile != null) {
             if (fileStateChanged) {
                 saveFile(currentFile);
                 setFileSavedStatus(true);
+                fileSaved = true;
             }
         } else {
             currentFile = saveAs();
             
             if (currentFile != null) {
                 setFileSavedStatus(true);
+                fileSaved = true;
             }
+        }
+        
+        if (fileSaved && !undoStack.isEmpty()) {
+            final AbstractEditEvent topEvent = 
+                    undoStack.get(undoStack.size() - 1);
+            
+            unclearEditEventsSavedStatus();
+            topEvent.setEventBeforeSave(true);
+            System.out.println("Set the topmost edit as before saved.");
+        }
+        
+        lastActionWasSave = true;
+    }
+    
+    private void unclearEditEventsSavedStatus() {
+        for (final AbstractEditEvent event : undoStack) {
+            event.setEventBeforeSave(false);
+            event.setEventAfterSave(false);
         }
     }
     
@@ -602,6 +630,13 @@ public class App extends Application {
             undoStack.remove(undoStack.size() - 1);
         }
         
+        System.out.println("pushEditEvent: lastActionWasSave = " + lastActionWasSave);
+        
+        if (lastActionWasSave) {
+            lastActionWasSave = false;
+            editEvent.setEventAfterSave(true);
+        }
+        
         undoStack.add(editEvent);
         activeEvents++;
         
@@ -629,6 +664,15 @@ public class App extends Application {
         editEvent.undo();
         tableView.getItems().addListener(listChangeListener);
         
+        System.out.println("undo() eventIsBeforeSave: " + editEvent.eventIsBeforeSave() + 
+                                  " eventIsAfterSave: " + editEvent.eventIsAfterSave());
+        
+        if (editEvent.eventIsAfterSave()) {
+            setFileSavedStatus(true);
+        } else {
+            setFileSavedStatus(false);
+        }
+        
         editMenuUndo.setDisable(!canUndo());
         editMenuRedo.setDisable(!canRedo());
     }
@@ -641,15 +685,19 @@ public class App extends Application {
         
         AbstractEditEvent editEvent = undoStack.get(activeEvents++);
         
-        if (editEvent instanceof CellUpdateEditEvent) {
-            System.out.println(editEvent);
-        }
-        
         // Since we record the edit events in the list change listener, we have
         // to remove it from the list in order to not record the actual redo.
         tableView.getItems().removeListener(listChangeListener);
         editEvent.redo();
         tableView.getItems().addListener(listChangeListener);
+        
+        System.out.println("redo(): eventIsBeforeSave: " + editEvent.eventIsBeforeSave() +
+                                   " eventIsAfterSave: " + editEvent.eventIsAfterSave());
+        if (editEvent.eventIsBeforeSave()) {
+            setFileSavedStatus(true);
+        } else {
+            setFileSavedStatus(false);
+        }
         
         editMenuUndo.setDisable(!canUndo());
         editMenuRedo.setDisable(!canRedo());
