@@ -30,7 +30,6 @@ import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableColumn.CellEditEvent;
 import javafx.scene.control.TableView;
-import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.control.cell.TextFieldTableCell;
 import javafx.scene.layout.BorderPane;
 import javafx.stage.FileChooser;
@@ -39,6 +38,12 @@ import javafx.stage.WindowEvent;
 import net.coderodde.billpal.undo.AbstractEditEvent;
 import net.coderodde.billpal.undo.support.CellUpdateEditEvent;
 
+/**
+ * This class implements the actual BillPal application.
+ * 
+ * @author Rodion "rodde" Efremov
+ * @version 1.6 (May 1, 2016)
+ */
 public class App extends Application {
 
     private static final int WINDOW_WIDTH  = 800;
@@ -546,19 +551,45 @@ public class App extends Application {
     private void actionExit() {
         if (fileStateChanged) {
             if (currentFile != null) {
-                boolean update = askConfirmation(
-                        "The current file is modified. Save the changes?");
+                ButtonType buttonType = 
+                        askYesNoCancel("The current file is modified. " + 
+                                       "Save the changes?");
                 
-                if (update) {
+                // User cancelled the exit.
+                if (buttonType == ButtonType.CANCEL) {
+                    return;
+                }
+                
+                // User pressed Yes or No. If Yes, save the current file and 
+                // exit the app.
+                if (buttonType == ButtonType.YES) {
                     saveFile(currentFile);
                 }
-            } else {
-                boolean save = askConfirmation(
-                        "The current file is not saved. Save it now?");
                 
-                if (save) {
-                    saveAs();
+                System.exit(0);
+            } else {
+                
+                ButtonType buttonType = 
+                        askYesNoCancel("The current file is not saved. " +
+                                       "Save it now?");
+                
+                // The user cancelled the exit.
+                if (buttonType == ButtonType.CANCEL) {
+                    return;
                 }
+                
+                // User pressed Yes or No. If Yes, try save the file.
+                if (buttonType == ButtonType.YES) {
+                    File file = saveAs();
+                    
+                    if (file == null) {
+                        // If here, the user pressed Cancel button in the 
+                        // Save File dialog.
+                        return;
+                    }
+                }
+                
+                System.exit(0);
             }
         }
         
@@ -996,73 +1027,5 @@ public class App extends Application {
     private void setCommentColumnCellFactory() {
         tableColumnComment.setCellFactory(
             TextFieldTableCell.<Bill>forTableColumn());
-    }
-    
-    private void setAmountTableColumnCellValueFactory() {
-        tableColumnAmount.setCellValueFactory(
-                new PropertyValueFactory<>("amount")
-        );
-    }
-    
-    private void setDateReceivedTableColumnCellValueFactory() {
-        tableColumnDateReceived.setCellValueFactory(
-                new PropertyValueFactory<>("dateReceived")
-        );
-    }
-    
-    private void setExpirationDateTableColumnCellValueFactory() {
-        tableColumnExpirationDate.setCellValueFactory(
-                new PropertyValueFactory<>("expirationDate")
-        );
-    }
-    
-    private void setPaymentDateTableColumnCellValueFactory() {
-        tableColumnPaymentDate.setCellValueFactory(
-                new PropertyValueFactory<>("paymentDate")
-        );
-    }
-    
-    private void setReceiverTableColumnCellValueFactory() {
-        tableColumnReceiver.setCellValueFactory(
-                new PropertyValueFactory<>("receiver")
-        );
-    }
-    
-    private void setReceiverIbanTableColumnCellValueFactory() {
-        tableColumnReceiverIban.setCellValueFactory(
-                new PropertyValueFactory<>("receiverIban")
-        );
-    }
-    
-    private void setReferenceNumberTableColumnCellValueFactory() {
-        tableColumnReferenceNumber.setCellValueFactory(
-                new PropertyValueFactory<>("referenceNumber")
-        );
-    }
-    
-    private void setBillNumberTableColumnCellValueFactory() {
-        tableColumnBillNumber.setCellValueFactory(
-                new PropertyValueFactory<>("billNumber")
-        );
-    }
-    
-    private void setCommentTableColumnCellValueFactory() {
-        tableColumnComment.setCellValueFactory(
-                new PropertyValueFactory<>("comment")
-        );
-    }
-    
-    private void setTableColumnCellValueFactories() {
-        setAmountTableColumnCellValueFactory();
-        setDateReceivedTableColumnCellValueFactory();
-        setExpirationDateTableColumnCellValueFactory();
-        
-        setPaymentDateTableColumnCellValueFactory();
-        setReceiverTableColumnCellValueFactory();
-        setReceiverIbanTableColumnCellValueFactory();
-        
-        setReferenceNumberTableColumnCellValueFactory();
-        setBillNumberTableColumnCellValueFactory();
-        setCommentTableColumnCellValueFactory();
     }
 }
