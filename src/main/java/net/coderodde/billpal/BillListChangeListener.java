@@ -63,9 +63,8 @@ class BillListChangeListener implements ListChangeListener<Bill> {
             for (Bill removedBill : removeSet) {
                 map.put(app.getBillIndexMap().get(removedBill), removedBill);
             }
-
+            
             app.pushEditEvent(new RowRemovalEditEvent(app, false, map));
-
             // Recompute the index map.
             app.rebuildBillListIndexMap();
         }

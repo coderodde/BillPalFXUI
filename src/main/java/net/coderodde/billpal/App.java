@@ -116,7 +116,7 @@ public class App extends Application {
         
         tableColumnExpirationDate.setStyle("-fx-font-weight: bold;");
         
-        setTableColumnCellValueFactories();
+        //setTableColumnCellValueFactories();
 
         setColumnCellFactories();
         setCellEditEventHandlers();
@@ -213,15 +213,6 @@ public class App extends Application {
     }
     
     private void setItemListeners() {
-        // A simple item list listener used for turning the unsaved status of
-        // the current file.
-//        tableView.getItems().addListener(
-//                (ListChangeListener.Change<? extends Bill> c) -> {
-//            
-//            
-//            System.out.println("dfsdafa");
-//        });
-        
         // A listener for recording the three types of changes:
         // 1. add row,
         // 2. remove selected rows,
@@ -459,6 +450,8 @@ public class App extends Application {
             
             editMenuUndo.setDisable(true);
             editMenuRedo.setDisable(true);
+            
+            rebuildBillListIndexMap();
         } catch (FileNotFoundException ex) {
             showErrorDialog(
                     "File access error", 
@@ -489,19 +482,10 @@ public class App extends Application {
             final AbstractEditEvent topEvent = 
                     undoStack.get(undoStack.size() - 1);
             
-            unclearEditEventsSavedStatus();
             topEvent.setEventBeforeSave(true);
-            System.out.println("Set the topmost edit as before saved.");
+            lastActionWasSave = true;
         }
         
-        lastActionWasSave = true;
-    }
-    
-    private void unclearEditEventsSavedStatus() {
-        for (final AbstractEditEvent event : undoStack) {
-            event.setEventBeforeSave(false);
-            event.setEventAfterSave(false);
-        }
     }
     
     private void actionSaveAs() {
@@ -630,8 +614,6 @@ public class App extends Application {
             undoStack.remove(undoStack.size() - 1);
         }
         
-        System.out.println("pushEditEvent: lastActionWasSave = " + lastActionWasSave);
-        
         if (lastActionWasSave) {
             lastActionWasSave = false;
             editEvent.setEventAfterSave(true);
@@ -664,9 +646,6 @@ public class App extends Application {
         editEvent.undo();
         tableView.getItems().addListener(listChangeListener);
         
-        System.out.println("undo() eventIsBeforeSave: " + editEvent.eventIsBeforeSave() + 
-                                  " eventIsAfterSave: " + editEvent.eventIsAfterSave());
-        
         if (editEvent.eventIsAfterSave()) {
             setFileSavedStatus(true);
         } else {
@@ -691,8 +670,6 @@ public class App extends Application {
         editEvent.redo();
         tableView.getItems().addListener(listChangeListener);
         
-        System.out.println("redo(): eventIsBeforeSave: " + editEvent.eventIsBeforeSave() +
-                                   " eventIsAfterSave: " + editEvent.eventIsAfterSave());
         if (editEvent.eventIsBeforeSave()) {
             setFileSavedStatus(true);
         } else {
